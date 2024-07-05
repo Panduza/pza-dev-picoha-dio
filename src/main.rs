@@ -39,6 +39,9 @@ use bsp::hal::{
 
 use rp_pico::hal::gpio::{FunctionPio0, Pin};
 
+use no_proto::error::NP_Error;
+use no_proto::NP_Factory;
+
 #[entry]
 fn main() -> ! {
     info!("Program start");
@@ -46,6 +49,18 @@ fn main() -> ! {
     let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let sio = Sio::new(pac.SIO);
+
+    let user_factory = NP_Factory::new(
+        r#"
+        struct({ fields: {
+            name: string(),
+            age: u16({ default: 0 }),
+            tags: list({ of: string() })
+        }})
+    "#,
+    )?;
+    // close buffer and get internal bytes
+    let user_bytes: Vec<u8> = user_buffer.finish().bytes();
 
     // External high-speed crystal on the pico board is 12Mhz
     let external_xtal_freq_hz = 12_000_000u32;
@@ -96,10 +111,10 @@ fn main() -> ! {
     let mut serial = SerialPort::new(&usb_bus);
 
     // Create a USB device with a fake VID and PID
-    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
+    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x05E1))
         .strings(&[StringDescriptors::default()
-            .manufacturer("Fake company")
-            .product("Serial port")
+            .manufacturer("panduza")
+            .product("picoha-dio")
             .serial_number("TEST")])
         .unwrap()
         .device_class(2) // from: https://www.usb.org/defined-class-codes

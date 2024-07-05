@@ -30,6 +30,8 @@ heapless = "0.8.0"
 
 irq = "0.2.3"
 
+no_proto = "0.9.60"
+
 # cargo build/run
 [profile.dev]
 codegen-units = 1
