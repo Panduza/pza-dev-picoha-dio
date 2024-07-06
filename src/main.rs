@@ -8,6 +8,7 @@ use bsp::entry;
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::OutputPin;
+use femtopb::Message;
 use panic_probe as _;
 
 use rp2040_hal::pio::PIOExt;
@@ -39,8 +40,7 @@ use bsp::hal::{
 
 use rp_pico::hal::gpio::{FunctionPio0, Pin};
 
-// use no_proto::error::NP_Error;
-// use no_proto::NP_Factory;
+mod api;
 
 use serial_line_ip;
 
@@ -51,6 +51,16 @@ fn main() -> ! {
     let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let sio = Sio::new(pac.SIO);
+
+    let mes = api::PicohaDioRequest {
+        r#type: femtopb::EnumValue::Known(api::RequestType::Ping),
+        pin_num: 0,
+        value: femtopb::EnumValue::Known(api::PinValue::Low),
+        unknown_fields: Default::default(),
+    };
+
+    // let mut cursor = femtopb::Cursor::new();
+    // let rr = mes.encoded_len()
 
     // let user_factory = NP_Factory::new(
     //     r#"

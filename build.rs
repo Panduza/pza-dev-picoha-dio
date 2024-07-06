@@ -31,5 +31,5 @@ fn main() {
     // `memory.x` is changed.
     println!("cargo:rerun-if-changed=memory.x");
 
-    femtopb_build::compile_protos(&["src/api.proto"], &["src"]).unwrap();
+    femtopb_build::compile_protos_into(&["src/api.proto"], &["src"], "src").unwrap();
 }
