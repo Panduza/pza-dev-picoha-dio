@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+message SearchRequest {
+  uint32 query = 1;
+  uint32 page_number = 2;
+  uint32 results_per_page = 3;
+}
