@@ -39,8 +39,10 @@ use bsp::hal::{
 
 use rp_pico::hal::gpio::{FunctionPio0, Pin};
 
-use no_proto::error::NP_Error;
-use no_proto::NP_Factory;
+// use no_proto::error::NP_Error;
+// use no_proto::NP_Factory;
+
+use serial_line_ip;
 
 #[entry]
 fn main() -> ! {
@@ -50,17 +52,20 @@ fn main() -> ! {
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let sio = Sio::new(pac.SIO);
 
-    let user_factory = NP_Factory::new(
-        r#"
-        struct({ fields: {
-            name: string(),
-            age: u16({ default: 0 }),
-            tags: list({ of: string() })
-        }})
-    "#,
-    )?;
-    // close buffer and get internal bytes
-    let user_bytes: Vec<u8> = user_buffer.finish().bytes();
+    // let user_factory = NP_Factory::new(
+    //     r#"
+    //     struct({ fields: {
+    //         command: u8({ default: 0 }),
+    //         pin: u8({ default: 0 }),
+    //         value: u8({ default: 0 }),
+    //     }})
+    // "#,
+    // )?;
+    // // close buffer and get internal bytes
+    // let user_bytes: Vec<u8> = user_buffer.finish().bytes();
+
+    // let mut slip = serial_line_ip::Encoder::new();
+    // let mut totals = slip.encode(INPUT_1, &mut output).unwrap();
 
     // External high-speed crystal on the pico board is 12Mhz
     let external_xtal_freq_hz = 12_000_000u32;
