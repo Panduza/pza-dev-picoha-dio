@@ -9,8 +9,10 @@
 //! new memory settings.
 
 use std::env;
+use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 
 // use protobuf_codegen;
@@ -31,5 +33,8 @@ fn main() {
     // `memory.x` is changed.
     println!("cargo:rerun-if-changed=memory.x");
 
-    femtopb_build::compile_protos_into(&["src/api.proto"], &["src"], "src").unwrap();
+    if !Path::new("src/api_dio.proto").exists() {
+        femtopb_build::compile_protos_into(&["src/api_dio.proto"], &["src"], "src").unwrap();
+        fs::rename("src/_.rs", "src/api_dio.rs").unwrap();
+    }
 }
