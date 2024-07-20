@@ -7,7 +7,7 @@
 use bsp::entry;
 use defmt::*;
 use defmt_rtt as _;
-use embedded_hal::digital::OutputPin;
+use embedded_hal::digital::{InputPin, OutputPin};
 use femtopb::Message;
 use panic_probe as _;
 
@@ -101,17 +101,34 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
-    // configure LED pin for Pio0.
-    let led: Pin<_, FunctionPio0, _> = pins.led.into_function();
-    let p0: Pin<_, FunctionPio0, _> = pins.gpio0.into_function();
+    // // configure LED pin for Pio0.
+    // // let led: Pin<_, FunctionPio0, _> = pins.led.into_function();
+    // let p0: Pin<_, FunctionPio0, _> = pins.gpio0.into_function();
 
-    let p1: Pin<_, FunctionPio0, _> = pins.gpio1.into_function(); // data
-                                                                  // PIN id for use inside of PIO
+    // let p1: Pin<_, FunctionPio0, _> = pins.gpio1.into_function(); // data
+    //                                                               // PIN id for use inside of PIO
+
+    // let mut piiii = pins.led.into_inout();
+
+    // Use GPIO 28 as an InOutPin
+    let mut pin = pins.led.into_push_pull_output().into_dyn_pin();
+
+    // pin.
+    // let _ = pin.set_low();
+
+    // pin.is_high().unwrap();
+
+    // .into_push_pull_output()
+    // // .into_floating_input()
+    // .into_dyn_pin();
+
+    // piiii.set_output_disable(disable)
+    // piiii.set_high().unwrap();
 
     // let led_pin_id = led.id().num;
     // let led_pin_id = 25;
-    let led_pin_id = 0; // mck
-    let data_pin = 1; // data
+    // let led_pin_id = 0; // mck
+    // let data_pin = 1; // data
 
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
@@ -139,6 +156,9 @@ fn main() -> ! {
     // container => https://github.com/mvertescher/serial-line-ip-rs
     // payload => https://crates.io/crates/no_proto
 
+    let mut cmd_buf = [0u8; 512];
+    let mut cmd_buf_size = 0;
+
     let mut said_hello = false;
     loop {
         // A welcome message at the beginning
@@ -159,7 +179,7 @@ fn main() -> ! {
 
         // Check for new data
         if usb_dev.poll(&mut [&mut serial]) {
-            let mut buf = [0u8; 64];
+            let mut buf = [0u8; 512];
             match serial.read(&mut buf) {
                 Err(_e) => {
                     // Do nothing
@@ -168,21 +188,39 @@ fn main() -> ! {
                     // Do nothing
                 }
                 Ok(count) => {
-                    // Convert to upper case
-                    buf.iter_mut().take(count).for_each(|b| {
-                        b.make_ascii_uppercase();
-                    });
-                    // Send back to the host
-                    let mut wr_ptr = &buf[..count];
-                    while !wr_ptr.is_empty() {
-                        match serial.write(wr_ptr) {
-                            Ok(len) => wr_ptr = &wr_ptr[len..],
-                            // On error, just drop unwritten data.
-                            // One possible error is Err(WouldBlock), meaning the USB
-                            // write buffer is full.
-                            Err(_) => break,
-                        };
+                    //
+                    let mut slip_decoder = serial_line_ip::Decoder::new();
+                    // let total_decoded = slip_decoder.decode(&encoded_response[..total_read], response)
+                    //     .map_err(|e| platform_error!("Unable to decode response: {:?}", e))?;
+
+                    // command_buffer[..count].iter().for_each(|b| {
+
+                    // });
+
+                    cmd_buf[..count].clone_from_slice(&buf);
+                    cmd_buf_size += count;
+
+                    for i in 0..cmd_buf_size {
+                        let _ = pin.set_high();
+                        // delay.delay_ms(500);
+                        // let _ = pin.set_low();
                     }
+
+                    // // Convert to upper case
+                    // buf.iter_mut().take(count).for_each(|b| {
+                    //     b.make_ascii_uppercase();
+                    // });
+                    // // Send back to the host
+                    // let mut wr_ptr = &buf[..count];
+                    // while !wr_ptr.is_empty() {
+                    //     match serial.write(wr_ptr) {
+                    //         Ok(len) => wr_ptr = &wr_ptr[len..],
+                    //         // On error, just drop unwritten data.
+                    //         // One possible error is Err(WouldBlock), meaning the USB
+                    //         // write buffer is full.
+                    //         Err(_) => break,
+                    //     };
+                    // }
                 }
             }
         }
