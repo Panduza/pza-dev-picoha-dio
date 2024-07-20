@@ -11,8 +11,11 @@ use embedded_hal::digital::{InputPin, OutputPin};
 use femtopb::Message;
 use panic_probe as _;
 
-use rp2040_hal::pio::PIOExt;
-
+use fugit::RateExtU32;
+use rp2040_hal::{
+    pio::PIOExt,
+    uart::{DataBits, StopBits, UartConfig, UartPeripheral},
+};
 // USB Device support
 use usb_device::{class_prelude::*, prelude::*};
 
@@ -43,6 +46,19 @@ use rp_pico::hal::gpio::{FunctionPio0, Pin};
 mod api_dio;
 
 use serial_line_ip;
+
+fn setup_debug_uart(pins: &mut rp_pico::Pins) {
+    // let ppp: Pin<_, FunctionPio0, _> = pins.gpio0.into_function();
+    // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
+    // let pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
+    // // Need to perform clock init before using UART or it will freeze.
+    // let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
+    //     .enable(
+    //         UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
+    //         clocks.peripheral_clock.freq(),
+    //     )
+    //     .unwrap();
+}
 
 #[entry]
 fn main() -> ! {
@@ -94,12 +110,24 @@ fn main() -> ! {
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
-    let pins = bsp::Pins::new(
+    let pins: rp_pico::Pins = bsp::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
+
+    // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
+    let pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
+    // Need to perform clock init before using UART or it will freeze.
+    let uart = UartPeripheral::new(pac.UART0, pins, &mut pac.RESETS)
+        .enable(
+            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
+            clocks.peripheral_clock.freq(),
+        )
+        .unwrap();
+
+    uart.write_full_blocking(b"Hello World!\r\n");
 
     // // configure LED pin for Pio0.
     // // let led: Pin<_, FunctionPio0, _> = pins.led.into_function();
@@ -111,7 +139,7 @@ fn main() -> ! {
     // let mut piiii = pins.led.into_inout();
 
     // Use GPIO 28 as an InOutPin
-    let mut pin = pins.led.into_push_pull_output().into_dyn_pin();
+    // let mut pin = pins.led.into_push_pull_output().into_dyn_pin();
 
     // pin.
     // let _ = pin.set_low();
@@ -199,19 +227,23 @@ fn main() -> ! {
 
                     // cmd_buf[cmd_buf_size..count].clone_from_slice(&buf);
 
-                    {
-                        let (left, right) = cmd_buf.split_at_mut(cmd_buf_size);
-                        right.clone_from_slice(&buf[..count]);
-                        cmd_buf_size += count;
-                    }
+                    let mut message = String::<512>::new();
+                    writeln!(&mut message, "Received {} bytes", count).unwrap();
+                    uart.write_full_blocking(message.as_bytes());
+
+                    // {
+                    //     let (left, right) = cmd_buf.split_at_mut(cmd_buf_size);
+                    //     right.clone_from_slice(&buf[..count]);
+                    //     cmd_buf_size += count;
+                    // }
 
                     // cmd_buf_size += count;
 
                     for i in 0..count {
-                        pin.set_high().unwrap();
-                        delay.delay_ms(250);
-                        pin.set_low().unwrap();
-                        delay.delay_ms(250);
+                        // pin.set_high().unwrap();
+                        // delay.delay_ms(250);
+                        // pin.set_low().unwrap();
+                        // delay.delay_ms(250);
                     }
 
                     // // Convert to upper case
@@ -234,5 +266,16 @@ fn main() -> ! {
         }
     }
 }
+
+// use core::panic::PanicInfo;
+// use core::sync::atomic::{self, Ordering};
+
+// #[inline(never)]
+// #[panic_handler]
+// fn panic(_info: &PanicInfo) -> ! {
+//     loop {
+//         atomic::compiler_fence(Ordering::SeqCst);
+//     }
+// }
 
 // End of file
