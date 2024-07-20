@@ -8,7 +8,8 @@ use bsp::entry;
 // use defmt::*;
 // use defmt_rtt as _;
 use embedded_hal::digital::{InputPin, OutputPin};
-// use femtopb::Message;
+use femtopb::Message;
+mod api_dio;
 // use panic_probe as _;
 
 use fugit::RateExtU32;
@@ -43,8 +44,6 @@ use bsp::hal::{
 
 use rp_pico::hal::gpio::{FunctionPio0, Pin};
 
-mod api_dio;
-
 use serial_line_ip;
 
 /// Type alias for the UART peripheral used in this example.
@@ -66,19 +65,6 @@ type UartType = UartPeripheral<
 >;
 
 static mut DEBUG_UART: Option<UartType> = None;
-
-fn setup_debug_uart(pins: &mut rp_pico::Pins) {
-    // let ppp: Pin<_, FunctionPio0, _> = pins.gpio0.into_function();
-    // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
-    // let pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
-    // // Need to perform clock init before using UART or it will freeze.
-    // let uart = UartPeripheral::new(peripherals.UART0, pins, &mut peripherals.RESETS)
-    //     .enable(
-    //         UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
-    //         clocks.peripheral_clock.freq(),
-    //     )
-    //     .unwrap();
-}
 
 #[entry]
 unsafe fn main() -> ! {
@@ -255,11 +241,6 @@ unsafe fn main() -> ! {
                     // Do nothing
                 }
                 Ok(count) => {
-                    //
-                    let mut slip_decoder = serial_line_ip::Decoder::new();
-                    // let total_decoded = slip_decoder.decode(&encoded_response[..total_read], response)
-                    //     .map_err(|e| platform_error!("Unable to decode response: {:?}", e))?;
-
                     // command_buffer[..count].iter().for_each(|b| {
 
                     // });
@@ -303,12 +284,44 @@ unsafe fn main() -> ! {
 
                     // cmd_buf_size += count;
 
-                    for i in 0..count {
-                        // pin.set_high().unwrap();
-                        // delay.delay_ms(250);
-                        // pin.set_low().unwrap();
-                        // delay.delay_ms(250);
-                    }
+                    //
+                    let mut slip_decoder = serial_line_ip::Decoder::new();
+                    let mut decoded_buffer = [0u8; 30];
+                    match slip_decoder.decode(&cmd_buf[..cmd_buf_size], &mut decoded_buffer) {
+                        Ok((input_bytes_processed, output_slice, is_end_of_packet)) => {
+                            writeln!(
+                                &mut message,
+                                "!!! {:?}, {:?}",
+                                input_bytes_processed, is_end_of_packet
+                            )
+                            .unwrap();
+                            DEBUG_UART
+                                .as_ref()
+                                .unwrap()
+                                .write_full_blocking(message.as_bytes());
+
+                            match api_dio::PicohaDioRequest::decode(
+                                &decoded_buffer[..input_bytes_processed],
+                            ) {
+                                Ok(ppp) => {
+                                    writeln!(&mut message, "deco {:?}", ppp.pin_num).unwrap();
+                                    DEBUG_UART
+                                        .as_ref()
+                                        .unwrap()
+                                        .write_full_blocking(message.as_bytes());
+                                }
+                                Err(e) => {
+                                    writeln!(&mut message, "error deco {:?}", e).unwrap();
+                                    DEBUG_UART
+                                        .as_ref()
+                                        .unwrap()
+                                        .write_full_blocking(message.as_bytes());
+                                }
+                            };
+                        }
+                        Err(_) => todo!(),
+                    };
+                    //     .map_err(|e| platform_error!("Unable to decode response: {:?}", e))?;
 
                     // // Convert to upper case
                     // buf.iter_mut().take(count).for_each(|b| {
