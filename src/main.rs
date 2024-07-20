@@ -5,11 +5,11 @@
 #![no_main]
 
 use bsp::entry;
-use defmt::*;
-use defmt_rtt as _;
+// use defmt::*;
+// use defmt_rtt as _;
 use embedded_hal::digital::{InputPin, OutputPin};
-use femtopb::Message;
-use panic_probe as _;
+// use femtopb::Message;
+// use panic_probe as _;
 
 use fugit::RateExtU32;
 use rp2040_hal::{
@@ -47,6 +47,26 @@ mod api_dio;
 
 use serial_line_ip;
 
+/// Type alias for the UART peripheral used in this example.
+type UartType = UartPeripheral<
+    rp2040_hal::uart::Enabled,
+    pac::UART0,
+    (
+        Pin<
+            rp2040_hal::gpio::bank0::Gpio0,
+            rp2040_hal::gpio::FunctionUart,
+            rp2040_hal::gpio::PullDown,
+        >,
+        Pin<
+            rp2040_hal::gpio::bank0::Gpio1,
+            rp2040_hal::gpio::FunctionUart,
+            rp2040_hal::gpio::PullDown,
+        >,
+    ),
+>;
+
+static mut DEBUG_UART: Option<UartType> = None;
+
 fn setup_debug_uart(pins: &mut rp_pico::Pins) {
     // let ppp: Pin<_, FunctionPio0, _> = pins.gpio0.into_function();
     // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
@@ -61,8 +81,8 @@ fn setup_debug_uart(pins: &mut rp_pico::Pins) {
 }
 
 #[entry]
-fn main() -> ! {
-    info!("Program start");
+unsafe fn main() -> ! {
+    // info!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();
     let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
@@ -120,14 +140,33 @@ fn main() -> ! {
     // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
     let pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
     // Need to perform clock init before using UART or it will freeze.
-    let uart = UartPeripheral::new(pac.UART0, pins, &mut pac.RESETS)
+    let uart: UartPeripheral<
+        rp2040_hal::uart::Enabled,
+        pac::UART0,
+        (
+            Pin<
+                rp2040_hal::gpio::bank0::Gpio0,
+                rp2040_hal::gpio::FunctionUart,
+                rp2040_hal::gpio::PullDown,
+            >,
+            Pin<
+                rp2040_hal::gpio::bank0::Gpio1,
+                rp2040_hal::gpio::FunctionUart,
+                rp2040_hal::gpio::PullDown,
+            >,
+        ),
+    > = UartPeripheral::new(pac.UART0, pins, &mut pac.RESETS)
         .enable(
             UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();
+    DEBUG_UART = Some(uart);
 
-    uart.write_full_blocking(b"Hello World!\r\n");
+    DEBUG_UART
+        .as_ref()
+        .unwrap()
+        .write_full_blocking(b"Hello World!\r\n");
 
     // // configure LED pin for Pio0.
     // // let led: Pin<_, FunctionPio0, _> = pins.led.into_function();
@@ -184,7 +223,7 @@ fn main() -> ! {
     // container => https://github.com/mvertescher/serial-line-ip-rs
     // payload => https://crates.io/crates/no_proto
 
-    let mut cmd_buf = [0u8; 512];
+    let mut cmd_buf = [0; 20];
     let mut cmd_buf_size = 0;
 
     let mut said_hello = false;
@@ -228,14 +267,39 @@ fn main() -> ! {
                     // cmd_buf[cmd_buf_size..count].clone_from_slice(&buf);
 
                     let mut message = String::<512>::new();
-                    writeln!(&mut message, "Received {} bytes", count).unwrap();
-                    uart.write_full_blocking(message.as_bytes());
+                    writeln!(&mut message, "Received {} bytes, {}", count, cmd_buf.len()).unwrap();
+                    DEBUG_UART
+                        .as_ref()
+                        .unwrap()
+                        .write_full_blocking(message.as_bytes());
 
-                    // {
-                    //     let (left, right) = cmd_buf.split_at_mut(cmd_buf_size);
-                    //     right.clone_from_slice(&buf[..count]);
-                    //     cmd_buf_size += count;
-                    // }
+                    let oooo = &buf[..count];
+                    writeln!(&mut message, "Received {:?}", oooo).unwrap();
+                    DEBUG_UART
+                        .as_ref()
+                        .unwrap()
+                        .write_full_blocking(message.as_bytes());
+
+                    {
+                        let (left, right) = cmd_buf.split_at_mut(cmd_buf_size);
+
+                        writeln!(&mut message, "left {}, right {}", left.len(), right.len())
+                            .unwrap();
+                        DEBUG_UART
+                            .as_ref()
+                            .unwrap()
+                            .write_full_blocking(message.as_bytes());
+
+                        right[..count].clone_from_slice(&buf[..count]);
+
+                        cmd_buf_size += count;
+                    }
+
+                    writeln!(&mut message, "total {:?}", cmd_buf).unwrap();
+                    DEBUG_UART
+                        .as_ref()
+                        .unwrap()
+                        .write_full_blocking(message.as_bytes());
 
                     // cmd_buf_size += count;
 
@@ -267,15 +331,34 @@ fn main() -> ! {
     }
 }
 
-// use core::panic::PanicInfo;
-// use core::sync::atomic::{self, Ordering};
+use core::panic::PanicInfo;
+use core::sync::atomic::{self, Ordering};
 
-// #[inline(never)]
-// #[panic_handler]
-// fn panic(_info: &PanicInfo) -> ! {
-//     loop {
-//         atomic::compiler_fence(Ordering::SeqCst);
-//     }
-// }
+#[inline(never)]
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    unsafe {
+        if let Some(ref mut uart) = DEBUG_UART {
+            let _ = uart.write_full_blocking(b"Panic!\r\n");
+
+            let line = _info.location().unwrap().line();
+            let file = _info.location().unwrap().file();
+
+            let mut message = String::<512>::new();
+            writeln!(&mut message, "panic {}:{}", file, line).unwrap();
+
+            let _ = uart.write_full_blocking(message.as_bytes());
+
+            if let Some(info) = _info.payload().downcast_ref::<&str>() {
+                let _ = uart.write_full_blocking(info.as_bytes());
+            } else {
+                let _ = uart.write_full_blocking(b"Unknown panic cause");
+            }
+        }
+    }
+    loop {
+        atomic::compiler_fence(Ordering::SeqCst);
+    }
+}
 
 // End of file
