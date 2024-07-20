@@ -197,13 +197,21 @@ fn main() -> ! {
 
                     // });
 
-                    cmd_buf[..count].clone_from_slice(&buf);
-                    cmd_buf_size += count;
+                    // cmd_buf[cmd_buf_size..count].clone_from_slice(&buf);
 
-                    for i in 0..cmd_buf_size {
-                        let _ = pin.set_high();
-                        // delay.delay_ms(500);
-                        // let _ = pin.set_low();
+                    {
+                        let (left, right) = cmd_buf.split_at_mut(cmd_buf_size);
+                        right.clone_from_slice(&buf[..count]);
+                        cmd_buf_size += count;
+                    }
+
+                    // cmd_buf_size += count;
+
+                    for i in 0..count {
+                        pin.set_high().unwrap();
+                        delay.delay_ms(250);
+                        pin.set_low().unwrap();
+                        delay.delay_ms(250);
                     }
 
                     // // Convert to upper case
