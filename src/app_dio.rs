@@ -60,7 +60,10 @@ impl AppDio {
                 new_request.value = ppp.value;
                 Some(new_request)
             }
-            Err(e) => None,
+            Err(e) => {
+                print_debug_message!("      * error decoding request: {:?}", e);
+                None
+            }
         }
     }
 
@@ -69,15 +72,46 @@ impl AppDio {
     fn try_to_decode_buffer(&mut self) -> Option<PicohaDioRequest> {
         let mut slip_decoder = serial_line_ip::Decoder::new();
 
-        match slip_decoder.decode(&self.in_buf[..self.in_buf_size], &mut self.decode_buffer) {
-            Ok((input_bytes_processed, output_slice, is_end_of_packet)) => {
-                if is_end_of_packet {
-                    Self::try_to_decode_api_request(output_slice)
-                } else {
-                    None
+        // Try to decode
+        let mut in_size: usize = 0;
+        let mut out_slice = [0u8; 64];
+        let mut out_size = 0;
+        let mut is_end_of_packet: bool = false;
+
+        {
+            match slip_decoder.decode(
+                self.in_buf[..self.in_buf_size].as_mut(),
+                &mut self.decode_buffer,
+            ) {
+                Ok((input_bytes_processed, out, is_eop)) => {
+                    in_size = input_bytes_processed;
+                    out_size = out.len();
+                    out_slice[..out_size].clone_from_slice(out);
+                    is_end_of_packet = is_eop;
+                }
+                Err(e) => {
+                    print_debug_message!("      * error decoding request: {:?}", e);
+                    return None;
                 }
             }
-            Err(_) => None,
+        }
+
+        // Debug
+        print_debug_message!("      * {:?} {:?}", in_size, is_end_of_packet);
+        print_debug_message!("      * - {:?} ", self.decode_buffer[..out_size].as_ref());
+
+        // Check if we have a complete packet
+        if is_end_of_packet {
+            // Shift data inside the in_buf to the left
+            let in_buf = &mut self.in_buf;
+            in_buf.copy_within(in_size..self.in_buf_size, 0);
+            self.in_buf_size -= in_size;
+
+            let pppp = self.decode_buffer[..out_size].as_ref();
+            let val = Self::try_to_decode_api_request(&pppp);
+            return val;
+        } else {
+            None
         }
     }
 
@@ -114,7 +148,7 @@ impl AppDio {
     fn process_request_ping(serial: &mut SerialPort<rp2040_hal::usb::UsbBus>) {
         print_debug_message!(b"      * processing request: PING");
         let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
         Self::send_answer(serial, answer);
     }
 
@@ -164,7 +198,42 @@ impl AppDio {
         let mut buffer = [0u8; 64];
         let encoded_len = answer.encoded_len();
         answer.encode(&mut buffer.as_mut()).unwrap();
-        serial.write(&buffer[..encoded_len]).unwrap();
+
+        print_debug_message!("      * sending answer: {:?}", encoded_len);
+        print_debug_message!("      * sending answer: {:?}", &buffer[..encoded_len]);
+
+        // Prepare encoding
+        let mut encoded_command = [0u8; 1024];
+        let mut slip_encoder = serial_line_ip::Encoder::new();
+
+        // Encode the command
+        let mut totals = match slip_encoder.encode(&buffer[..encoded_len], &mut encoded_command) {
+            Ok(t) => t,
+            Err(e) => {
+                print_debug_message!("      * error encoding answer: {:?}", e);
+                return;
+            }
+        };
+
+        // Finalise the encoding
+        totals += match slip_encoder.finish(&mut encoded_command[totals.written..]) {
+            Ok(t) => t,
+            Err(e) => {
+                print_debug_message!("      * error encoding answer: {:?}", e);
+                return;
+            }
+        };
+
+        print_debug_message!("      * sending answer 2: {:?}", totals.written);
+        print_debug_message!(
+            "      * sending answer 2: {:?}",
+            &encoded_command[..totals.written]
+        );
+
+        match serial.write(&encoded_command[..totals.written]) {
+            Ok(_) => print_debug_message!(b"      * answer sent"),
+            Err(e) => print_debug_message!("      * answer not sent {:?}", e),
+        }
     }
 
     /// Process incoming data
@@ -176,11 +245,9 @@ impl AppDio {
     ) {
         print_debug_message!("+ recieved data: {:?}", data);
         self.accumulate_new_data(data);
-        while self.try_to_decode_buffer().is_some() {
-            if let Some(request) = self.try_to_decode_buffer() {
-                print_debug_message!("+ decoded request: {:?}", request);
-                Self::process_request(serial, request);
-            }
+        while let Some(request) = self.try_to_decode_buffer() {
+            print_debug_message!("+ decoded request: {:?}", request);
+            Self::process_request(serial, request);
         }
     }
 }

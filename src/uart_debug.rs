@@ -49,7 +49,7 @@ macro_rules! print_debug_message {
         crate::uart_debug_print(debug_message.as_bytes());
     }};
     ($fmt:expr, $arg0:expr, $arg1:expr) => {{
-        let mut debug_message = String::<512>::new();
+        let mut debug_message = heapless::String::<512>::new();
         writeln!(&mut debug_message, $fmt, $arg0, $arg1).unwrap();
         crate::uart_debug_print(debug_message.as_bytes());
     }};
