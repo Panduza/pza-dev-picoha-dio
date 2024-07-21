@@ -1,6 +1,7 @@
 // Print debug support
+use crate::api_dio_utils;
 use crate::{api_dio::PicohaDioRequest, print_debug_message};
-use core::fmt::Write;
+use core::fmt::{self, Write};
 
 // Message deserialization support
 use femtopb::Message;
@@ -22,6 +23,8 @@ pub struct AppDio {
 }
 
 impl AppDio {
+    /// Create a new instance of the AppDio
+    ///
     pub fn new() -> Self {
         AppDio {
             in_buf: [0u8; 64],
@@ -31,6 +34,7 @@ impl AppDio {
     }
 
     /// Accumulate new data
+    ///
     fn accumulate_new_data(&mut self, data: &[u8]) {
         // Compute indexes
         let data_len = data.len();
@@ -46,7 +50,7 @@ impl AppDio {
 
     /// Try to decode an API request
     ///
-    fn try_to_decode_api_request(&mut self, frame: &[u8]) -> Option<PicohaDioRequest> {
+    fn try_to_decode_api_request(frame: &[u8]) -> Option<PicohaDioRequest> {
         match PicohaDioRequest::decode(frame) {
             Ok(ppp) => {
                 let mut new_request = PicohaDioRequest::default();
@@ -64,22 +68,37 @@ impl AppDio {
     fn try_to_decode_buffer(&mut self) -> Option<PicohaDioRequest> {
         let mut slip_decoder = serial_line_ip::Decoder::new();
 
-        slip_decoder
-            .decode(&self.in_buf[..self.in_buf_size], &mut self.decode_buffer)
-            .map(|(input_bytes_processed, output_slice, is_end_of_packet)| {
+        match slip_decoder.decode(&self.in_buf[..self.in_buf_size], &mut self.decode_buffer) {
+            Ok((input_bytes_processed, output_slice, is_end_of_packet)) => {
+                if is_end_of_packet {
+                    Self::try_to_decode_api_request(output_slice)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        }
+    }
 
-                // match  {
-                //     Ok(ppp) => {
-                //         print_debug_message!("deco {:?}", ppp.pin_num);
-                //         Some(ppp)
-                //     }
-                //     Err(e) => {
-                //         print_debug_message!("error deco {:?}", e);
-                //         None
-                //     }
-                // }
-            })
-            .ok()
+    ///
+    ///
+    fn process_request(
+        &self,
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
+        request: PicohaDioRequest,
+    ) {
+        print_debug_message!("+ processing request: {:?}", request);
+
+        match request.r#type {
+            femtopb::EnumValue::Known(k) => match k {
+                crate::api_dio::RequestType::Ping => todo!(),
+                crate::api_dio::RequestType::SetPinDirection => todo!(),
+                crate::api_dio::RequestType::SetPinValue => todo!(),
+                crate::api_dio::RequestType::GetPinDirection => todo!(),
+                crate::api_dio::RequestType::GetPinValue => todo!(),
+            },
+            femtopb::EnumValue::Unknown(_) => todo!(),
+        }
     }
 
     /// Process incoming data
@@ -91,5 +110,11 @@ impl AppDio {
     ) {
         print_debug_message!("+ recieved data: {:?}", data);
         self.accumulate_new_data(data);
+        while self.try_to_decode_buffer().is_some() {
+            if let Some(request) = self.try_to_decode_buffer() {
+                print_debug_message!("+ decoded request: {:?}", request);
+                self.process_request(serial, request);
+            }
+        }
     }
 }

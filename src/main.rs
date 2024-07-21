@@ -10,6 +10,7 @@ use uart_debug::uart_debug_init;
 use uart_debug::uart_debug_print;
 
 // application logic
+mod api_dio_utils;
 mod app_dio;
 use app_dio::AppDio;
 
@@ -181,29 +182,9 @@ unsafe fn main() -> ! {
         .build();
 
     // --------------------------------------------------------------
-    let mut cmd_buf = [0; 20];
-    let mut cmd_buf_size = 0;
-
-    let mut said_hello = false;
 
     let mut app = AppDio::new();
     loop {
-        // A welcome message at the beginning
-        if !said_hello && timer.get_counter().ticks() >= 2_000_000 {
-            said_hello = true;
-            let _ = serial.write(b"Hello, World!\r\n");
-
-            let time = timer.get_counter().ticks();
-            let mut text: String<64> = String::new();
-            writeln!(&mut text, "Current timer ticks: {}", time).unwrap();
-
-            // This only works reliably because the number of bytes written to
-            // the serial port is smaller than the buffers available to the USB
-            // peripheral. In general, the return value should be handled, so that
-            // bytes not transferred yet don't get lost.
-            let _ = serial.write(text.as_bytes());
-        }
-
         // Check for new data
         if usb_dev.poll(&mut [&mut serial]) {
             let mut buf = [0u8; 512];
@@ -216,38 +197,6 @@ unsafe fn main() -> ! {
                 }
                 Ok(count) => {
                     app.process_incoming_data(&mut serial, &buf[..count]);
-
-                    //
-                    let mut slip_decoder = serial_line_ip::Decoder::new();
-                    let mut decoded_buffer = [0u8; 30];
-                    match slip_decoder.decode(&cmd_buf[..cmd_buf_size], &mut decoded_buffer) {
-                        Ok((input_bytes_processed, output_slice, is_end_of_packet)) => {
-                            // writeln!(
-                            //     &mut message,
-                            //     "!!! {:?}, {:?}, {:?}",
-                            //     input_bytes_processed, output_slice, is_end_of_packet
-                            // )
-                            // .unwrap();
-                            // DEBUG_UART
-                            //     .as_ref()
-                            //     .unwrap()
-                            //     .write_full_blocking(message.as_bytes());
-
-                            match api_dio::PicohaDioRequest::decode(output_slice) {
-                                Ok(ppp) => {
-                                    print_debug_message!("deco {:?}", ppp.pin_num);
-                                }
-                                Err(e) => {
-                                    // writeln!(&mut message, "error deco {:?}", e).unwrap();
-                                    // DEBUG_UART
-                                    //     .as_ref()
-                                    //     .unwrap()
-                                    //     .write_full_blocking(message.as_bytes());
-                                }
-                            };
-                        }
-                        Err(_) => todo!(),
-                    };
                 }
             }
         }
