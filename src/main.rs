@@ -4,6 +4,15 @@
 #![no_std]
 #![no_main]
 
+// uart debug
+mod uart_debug;
+use uart_debug::uart_debug_init;
+use uart_debug::uart_debug_print;
+
+// application logic
+mod app_dio;
+use app_dio::AppDio;
+
 use bsp::entry;
 // use defmt::*;
 // use defmt_rtt as _;
@@ -45,26 +54,6 @@ use bsp::hal::{
 use rp_pico::hal::gpio::{FunctionPio0, Pin};
 
 use serial_line_ip;
-
-/// Type alias for the UART peripheral used in this example.
-type UartType = UartPeripheral<
-    rp2040_hal::uart::Enabled,
-    pac::UART0,
-    (
-        Pin<
-            rp2040_hal::gpio::bank0::Gpio0,
-            rp2040_hal::gpio::FunctionUart,
-            rp2040_hal::gpio::PullDown,
-        >,
-        Pin<
-            rp2040_hal::gpio::bank0::Gpio1,
-            rp2040_hal::gpio::FunctionUart,
-            rp2040_hal::gpio::PullDown,
-        >,
-    ),
->;
-
-static mut DEBUG_UART: Option<UartType> = None;
 
 #[entry]
 unsafe fn main() -> ! {
@@ -116,6 +105,8 @@ unsafe fn main() -> ! {
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
+    // --------------------------------------------------------------
+    // Get pins of the systems
     let pins: rp_pico::Pins = bsp::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
@@ -123,36 +114,20 @@ unsafe fn main() -> ! {
         &mut pac.RESETS,
     );
 
+    // --------------------------------------------------------------
+    // Init uart debug
     // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
-    let pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
-    // Need to perform clock init before using UART or it will freeze.
-    let uart: UartPeripheral<
-        rp2040_hal::uart::Enabled,
-        pac::UART0,
-        (
-            Pin<
-                rp2040_hal::gpio::bank0::Gpio0,
-                rp2040_hal::gpio::FunctionUart,
-                rp2040_hal::gpio::PullDown,
-            >,
-            Pin<
-                rp2040_hal::gpio::bank0::Gpio1,
-                rp2040_hal::gpio::FunctionUart,
-                rp2040_hal::gpio::PullDown,
-            >,
-        ),
-    > = UartPeripheral::new(pac.UART0, pins, &mut pac.RESETS)
+    let uart_debug_pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
+    let uart_debug = UartPeripheral::new(pac.UART0, uart_debug_pins, &mut pac.RESETS)
         .enable(
             UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();
-    DEBUG_UART = Some(uart);
+    uart_debug_init(uart_debug);
+    print_debug_message!(b"Hello World!\r\n");
 
-    DEBUG_UART
-        .as_ref()
-        .unwrap()
-        .write_full_blocking(b"Hello World!\r\n");
+    // --------------------------------------------------------------
 
     // // configure LED pin for Pio0.
     // // let led: Pin<_, FunctionPio0, _> = pins.led.into_function();
@@ -183,6 +158,8 @@ unsafe fn main() -> ! {
     // let led_pin_id = 0; // mck
     // let data_pin = 1; // data
 
+    // --------------------------------------------------------------
+    // USB CDC
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
         pac.USBCTRL_REGS,
@@ -191,10 +168,8 @@ unsafe fn main() -> ! {
         true,
         &mut pac.RESETS,
     ));
-
     // Set up the USB Communications Class Device driver
-    let mut serial = SerialPort::new(&usb_bus);
-
+    let mut serial: SerialPort<rp2040_hal::usb::UsbBus> = SerialPort::new(&usb_bus);
     // Create a USB device with a fake VID and PID
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x05E1))
         .strings(&[StringDescriptors::default()
@@ -205,14 +180,13 @@ unsafe fn main() -> ! {
         .device_class(2) // from: https://www.usb.org/defined-class-codes
         .build();
 
-    // next step
-    // container => https://github.com/mvertescher/serial-line-ip-rs
-    // payload => https://crates.io/crates/no_proto
-
+    // --------------------------------------------------------------
     let mut cmd_buf = [0; 20];
     let mut cmd_buf_size = 0;
 
     let mut said_hello = false;
+
+    let mut app = AppDio::new();
     loop {
         // A welcome message at the beginning
         if !said_hello && timer.get_counter().ticks() >= 2_000_000 {
@@ -241,46 +215,43 @@ unsafe fn main() -> ! {
                     // Do nothing
                 }
                 Ok(count) => {
+                    app.process_incoming_data(&mut serial, &buf[..count]);
                     // command_buffer[..count].iter().for_each(|b| {
 
                     // });
 
                     // cmd_buf[cmd_buf_size..count].clone_from_slice(&buf);
 
-                    let mut message = String::<512>::new();
-                    writeln!(&mut message, "Received {} bytes, {}", count, cmd_buf.len()).unwrap();
-                    DEBUG_UART
-                        .as_ref()
-                        .unwrap()
-                        .write_full_blocking(message.as_bytes());
+                    // Usage:
+                    print_debug_message!("Received {} bytes, {}", count, cmd_buf.len());
 
                     let oooo = &buf[..count];
-                    writeln!(&mut message, "Received {:?}", oooo).unwrap();
-                    DEBUG_UART
-                        .as_ref()
-                        .unwrap()
-                        .write_full_blocking(message.as_bytes());
+                    // writeln!(&mut message, "Received {:?}", oooo).unwrap();
+                    // DEBUG_UART
+                    //     .as_ref()
+                    //     .unwrap()
+                    //     .write_full_blocking(message.as_bytes());
 
                     {
                         let (left, right) = cmd_buf.split_at_mut(cmd_buf_size);
 
-                        writeln!(&mut message, "left {}, right {}", left.len(), right.len())
-                            .unwrap();
-                        DEBUG_UART
-                            .as_ref()
-                            .unwrap()
-                            .write_full_blocking(message.as_bytes());
+                        // writeln!(&mut message, "left {}, right {}", left.len(), right.len())
+                        //     .unwrap();
+                        // DEBUG_UART
+                        //     .as_ref()
+                        //     .unwrap()
+                        //     .write_full_blocking(message.as_bytes());
 
                         right[..count].clone_from_slice(&buf[..count]);
 
                         cmd_buf_size += count;
                     }
 
-                    writeln!(&mut message, "total {:?}", cmd_buf).unwrap();
-                    DEBUG_UART
-                        .as_ref()
-                        .unwrap()
-                        .write_full_blocking(message.as_bytes());
+                    // writeln!(&mut message, "total {:?}", cmd_buf).unwrap();
+                    // DEBUG_UART
+                    //     .as_ref()
+                    //     .unwrap()
+                    //     .write_full_blocking(message.as_bytes());
 
                     // cmd_buf_size += count;
 
@@ -289,55 +260,32 @@ unsafe fn main() -> ! {
                     let mut decoded_buffer = [0u8; 30];
                     match slip_decoder.decode(&cmd_buf[..cmd_buf_size], &mut decoded_buffer) {
                         Ok((input_bytes_processed, output_slice, is_end_of_packet)) => {
-                            writeln!(
-                                &mut message,
-                                "!!! {:?}, {:?}",
-                                input_bytes_processed, is_end_of_packet
-                            )
-                            .unwrap();
-                            DEBUG_UART
-                                .as_ref()
-                                .unwrap()
-                                .write_full_blocking(message.as_bytes());
+                            // writeln!(
+                            //     &mut message,
+                            //     "!!! {:?}, {:?}, {:?}",
+                            //     input_bytes_processed, output_slice, is_end_of_packet
+                            // )
+                            // .unwrap();
+                            // DEBUG_UART
+                            //     .as_ref()
+                            //     .unwrap()
+                            //     .write_full_blocking(message.as_bytes());
 
-                            match api_dio::PicohaDioRequest::decode(
-                                &decoded_buffer[..input_bytes_processed],
-                            ) {
+                            match api_dio::PicohaDioRequest::decode(output_slice) {
                                 Ok(ppp) => {
-                                    writeln!(&mut message, "deco {:?}", ppp.pin_num).unwrap();
-                                    DEBUG_UART
-                                        .as_ref()
-                                        .unwrap()
-                                        .write_full_blocking(message.as_bytes());
+                                    print_debug_message!("deco {:?}", ppp.pin_num);
                                 }
                                 Err(e) => {
-                                    writeln!(&mut message, "error deco {:?}", e).unwrap();
-                                    DEBUG_UART
-                                        .as_ref()
-                                        .unwrap()
-                                        .write_full_blocking(message.as_bytes());
+                                    // writeln!(&mut message, "error deco {:?}", e).unwrap();
+                                    // DEBUG_UART
+                                    //     .as_ref()
+                                    //     .unwrap()
+                                    //     .write_full_blocking(message.as_bytes());
                                 }
                             };
                         }
                         Err(_) => todo!(),
                     };
-                    //     .map_err(|e| platform_error!("Unable to decode response: {:?}", e))?;
-
-                    // // Convert to upper case
-                    // buf.iter_mut().take(count).for_each(|b| {
-                    //     b.make_ascii_uppercase();
-                    // });
-                    // // Send back to the host
-                    // let mut wr_ptr = &buf[..count];
-                    // while !wr_ptr.is_empty() {
-                    //     match serial.write(wr_ptr) {
-                    //         Ok(len) => wr_ptr = &wr_ptr[len..],
-                    //         // On error, just drop unwritten data.
-                    //         // One possible error is Err(WouldBlock), meaning the USB
-                    //         // write buffer is full.
-                    //         Err(_) => break,
-                    //     };
-                    // }
                 }
             }
         }
@@ -350,25 +298,11 @@ use core::sync::atomic::{self, Ordering};
 #[inline(never)]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    unsafe {
-        if let Some(ref mut uart) = DEBUG_UART {
-            let _ = uart.write_full_blocking(b"Panic!\r\n");
+    print_debug_message!(b"Panic!\r\n");
+    let line = _info.location().unwrap().line();
+    let file = _info.location().unwrap().file();
+    print_debug_message!("panic {}:{}", file, line);
 
-            let line = _info.location().unwrap().line();
-            let file = _info.location().unwrap().file();
-
-            let mut message = String::<512>::new();
-            writeln!(&mut message, "panic {}:{}", file, line).unwrap();
-
-            let _ = uart.write_full_blocking(message.as_bytes());
-
-            if let Some(info) = _info.payload().downcast_ref::<&str>() {
-                let _ = uart.write_full_blocking(info.as_bytes());
-            } else {
-                let _ = uart.write_full_blocking(b"Unknown panic cause");
-            }
-        }
-    }
     loop {
         atomic::compiler_fence(Ordering::SeqCst);
     }
