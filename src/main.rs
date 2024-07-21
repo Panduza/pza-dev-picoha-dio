@@ -216,44 +216,6 @@ unsafe fn main() -> ! {
                 }
                 Ok(count) => {
                     app.process_incoming_data(&mut serial, &buf[..count]);
-                    // command_buffer[..count].iter().for_each(|b| {
-
-                    // });
-
-                    // cmd_buf[cmd_buf_size..count].clone_from_slice(&buf);
-
-                    // Usage:
-                    print_debug_message!("Received {} bytes, {}", count, cmd_buf.len());
-
-                    let oooo = &buf[..count];
-                    // writeln!(&mut message, "Received {:?}", oooo).unwrap();
-                    // DEBUG_UART
-                    //     .as_ref()
-                    //     .unwrap()
-                    //     .write_full_blocking(message.as_bytes());
-
-                    {
-                        let (left, right) = cmd_buf.split_at_mut(cmd_buf_size);
-
-                        // writeln!(&mut message, "left {}, right {}", left.len(), right.len())
-                        //     .unwrap();
-                        // DEBUG_UART
-                        //     .as_ref()
-                        //     .unwrap()
-                        //     .write_full_blocking(message.as_bytes());
-
-                        right[..count].clone_from_slice(&buf[..count]);
-
-                        cmd_buf_size += count;
-                    }
-
-                    // writeln!(&mut message, "total {:?}", cmd_buf).unwrap();
-                    // DEBUG_UART
-                    //     .as_ref()
-                    //     .unwrap()
-                    //     .write_full_blocking(message.as_bytes());
-
-                    // cmd_buf_size += count;
 
                     //
                     let mut slip_decoder = serial_line_ip::Decoder::new();
