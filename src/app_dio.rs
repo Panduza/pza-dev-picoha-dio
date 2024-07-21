@@ -2,6 +2,9 @@
 use crate::{api_dio::PicohaDioRequest, print_debug_message};
 use core::fmt::Write;
 
+// Message deserialization support
+use femtopb::Message;
+
 // USB Communications Class Device support
 use usbd_serial::SerialPort;
 
@@ -43,10 +46,24 @@ impl AppDio {
 
     /// Try to decode a request from the incoming data buffer
     ///
-    fn try_to_decode_request(&self) -> Option<PicohaDioRequest> {
+    fn try_to_decode_request(&mut self) -> Option<PicohaDioRequest> {
         let mut slip_decoder = serial_line_ip::Decoder::new();
 
-        // match slip_decoder.decode(&cmd_buf[..cmd_buf_size], &mut decoded_buffer) {
+        slip_decoder
+            .decode(&self.in_buf[..self.in_buf_size], &mut self.decode_buffer)
+            .map(|(input_bytes_processed, output_slice, is_end_of_packet)| {
+                match PicohaDioRequest::decode(output_slice) {
+                    Ok(ppp) => {
+                        print_debug_message!("deco {:?}", ppp.pin_num);
+                        Some(ppp)
+                    }
+                    Err(e) => {
+                        print_debug_message!("error deco {:?}", e);
+                        None
+                    }
+                }
+            });
+
         //     Ok((input_bytes_processed, output_slice, is_end_of_packet)) => {
 
         None
