@@ -1,7 +1,8 @@
 // Print debug support
 use crate::api_dio_utils;
-use crate::{api_dio::PicohaDioRequest, print_debug_message};
-use core::fmt::{self, Write};
+use crate::uart_debug::uart_debug_print;
+use crate::{api_dio::PicohaDioAnswer, api_dio::PicohaDioRequest, print_debug_message};
+use core::fmt::Write;
 
 // Message deserialization support
 use femtopb::Message;
@@ -83,7 +84,6 @@ impl AppDio {
     ///
     ///
     fn process_request(
-        &self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
@@ -91,14 +91,80 @@ impl AppDio {
 
         match request.r#type {
             femtopb::EnumValue::Known(k) => match k {
-                crate::api_dio::RequestType::Ping => todo!(),
-                crate::api_dio::RequestType::SetPinDirection => todo!(),
-                crate::api_dio::RequestType::SetPinValue => todo!(),
-                crate::api_dio::RequestType::GetPinDirection => todo!(),
-                crate::api_dio::RequestType::GetPinValue => todo!(),
+                crate::api_dio::RequestType::Ping => Self::process_request_ping(serial),
+                crate::api_dio::RequestType::SetPinDirection => {
+                    Self::process_request_set_pin_direction(serial, request)
+                }
+                crate::api_dio::RequestType::SetPinValue => {
+                    Self::process_request_set_pin_value(serial, request)
+                }
+                crate::api_dio::RequestType::GetPinDirection => {
+                    Self::process_request_get_pin_direction(serial, request)
+                }
+                crate::api_dio::RequestType::GetPinValue => {
+                    Self::process_request_get_pin_value(serial, request)
+                }
             },
             femtopb::EnumValue::Unknown(_) => todo!(),
         }
+    }
+
+    /// Process a ping request
+    ///
+    fn process_request_ping(serial: &mut SerialPort<rp2040_hal::usb::UsbBus>) {
+        print_debug_message!(b"      * processing request: PING");
+        let mut answer = PicohaDioAnswer::default();
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        Self::send_answer(serial, answer);
+    }
+
+    fn process_request_set_pin_direction(
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
+        request: PicohaDioRequest,
+    ) {
+        print_debug_message!(b"      * processing request: SET_PIN_DIRECTION");
+        let mut answer = PicohaDioAnswer::default();
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        Self::send_answer(serial, answer);
+    }
+
+    fn process_request_set_pin_value(
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
+        request: PicohaDioRequest,
+    ) {
+        print_debug_message!(b"      * processing request: SET_PIN_VALUE");
+        let mut answer = PicohaDioAnswer::default();
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        Self::send_answer(serial, answer);
+    }
+
+    fn process_request_get_pin_direction(
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
+        request: PicohaDioRequest,
+    ) {
+        print_debug_message!(b"      * processing request: GET_PIN_DIRECTION");
+        let mut answer = PicohaDioAnswer::default();
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        Self::send_answer(serial, answer);
+    }
+
+    fn process_request_get_pin_value(
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
+        request: PicohaDioRequest,
+    ) {
+        print_debug_message!(b"      * processing request: GET_PIN_VALUE");
+        let mut answer = PicohaDioAnswer::default();
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        Self::send_answer(serial, answer);
+    }
+
+    /// Send an answer
+    ///
+    fn send_answer(serial: &mut SerialPort<rp2040_hal::usb::UsbBus>, answer: PicohaDioAnswer) {
+        let mut buffer = [0u8; 64];
+        let encoded_len = answer.encoded_len();
+        answer.encode(&mut buffer.as_mut()).unwrap();
+        serial.write(&buffer[..encoded_len]).unwrap();
     }
 
     /// Process incoming data
@@ -113,7 +179,7 @@ impl AppDio {
         while self.try_to_decode_buffer().is_some() {
             if let Some(request) = self.try_to_decode_buffer() {
                 print_debug_message!("+ decoded request: {:?}", request);
-                self.process_request(serial, request);
+                Self::process_request(serial, request);
             }
         }
     }
