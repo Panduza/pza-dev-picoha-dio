@@ -64,13 +64,6 @@ unsafe fn main() -> ! {
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let sio = Sio::new(pac.SIO);
 
-    let mes = api_dio::PicohaDioRequest {
-        r#type: femtopb::EnumValue::Known(api_dio::RequestType::Ping),
-        pin_num: 0,
-        value: femtopb::EnumValue::Known(api_dio::PinValue::Low),
-        unknown_fields: Default::default(),
-    };
-
     // let mut cursor = femtopb::Cursor::new();
     // let rr = mes.encoded_len()
 
@@ -182,7 +175,7 @@ unsafe fn main() -> ! {
         .build();
 
     // --------------------------------------------------------------
-
+    //
     let mut app = AppDio::new();
     loop {
         // Check for new data
