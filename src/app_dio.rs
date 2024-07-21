@@ -44,29 +44,42 @@ impl AppDio {
         self.in_buf_size += data_len;
     }
 
+    /// Try to decode an API request
+    ///
+    fn try_to_decode_api_request(&mut self, frame: &[u8]) -> Option<PicohaDioRequest> {
+        match PicohaDioRequest::decode(frame) {
+            Ok(ppp) => {
+                let mut new_request = PicohaDioRequest::default();
+                new_request.r#type = ppp.r#type;
+                new_request.pin_num = ppp.pin_num;
+                new_request.value = ppp.value;
+                Some(new_request)
+            }
+            Err(e) => None,
+        }
+    }
+
     /// Try to decode a request from the incoming data buffer
     ///
-    fn try_to_decode_request(&mut self) -> Option<PicohaDioRequest> {
+    fn try_to_decode_buffer(&mut self) -> Option<PicohaDioRequest> {
         let mut slip_decoder = serial_line_ip::Decoder::new();
 
         slip_decoder
             .decode(&self.in_buf[..self.in_buf_size], &mut self.decode_buffer)
             .map(|(input_bytes_processed, output_slice, is_end_of_packet)| {
-                match PicohaDioRequest::decode(output_slice) {
-                    Ok(ppp) => {
-                        print_debug_message!("deco {:?}", ppp.pin_num);
-                        Some(ppp)
-                    }
-                    Err(e) => {
-                        print_debug_message!("error deco {:?}", e);
-                        None
-                    }
-                }
-            });
 
-        //     Ok((input_bytes_processed, output_slice, is_end_of_packet)) => {
-
-        None
+                // match  {
+                //     Ok(ppp) => {
+                //         print_debug_message!("deco {:?}", ppp.pin_num);
+                //         Some(ppp)
+                //     }
+                //     Err(e) => {
+                //         print_debug_message!("error deco {:?}", e);
+                //         None
+                //     }
+                // }
+            })
+            .ok()
     }
 
     /// Process incoming data
