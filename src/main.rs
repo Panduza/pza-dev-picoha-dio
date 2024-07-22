@@ -114,34 +114,29 @@ unsafe fn main() -> ! {
     //     .into_push_pull_output()
     //     .into_pull_type()
     //     .into_dyn_pin();
-    let p2 = pins
-        .gpio3
-        .into_floating_input()
-        .into_pull_type()
-        .into_dyn_pin();
 
-    let did = pins.led.into_push_pull_output().into_dyn_pin().id();
-    let pppppp = new_pin(did);
+    // let did: rp2040_hal::gpio::DynPinId = pins.led.into_push_pull_output().into_dyn_pin().id();
+    // let pppppp = new_pin(did);
 
-    let mut neerr = pppppp
-        .try_into_function::<hal::gpio::FunctionSioOutput>()
-        .ok()
-        .unwrap();
+    // let mut neerr = pppppp
+    //     .try_into_function::<hal::gpio::FunctionSioOutput>()
+    //     .ok()
+    //     .unwrap();
 
     // let pppppppppppp = neerr.into_push_pull_output();
 
-    neerr.set_high().unwrap();
+    // neerr.set_high().unwrap();
 
-    delay.delay_ms(2000u32);
+    // delay.delay_ms(2000u32);
 
-    let pppppp2 = new_pin(did);
+    // let pppppp2 = new_pin(did);
 
-    let mut neerr2 = pppppp2
-        .try_into_function::<hal::gpio::FunctionSioInput>()
-        .ok()
-        .unwrap();
+    // let mut neerr2 = pppppp2
+    //     .try_into_function::<hal::gpio::FunctionSioInput>()
+    //     .ok()
+    //     .unwrap();
 
-    print_debug_message!("Hello World! {}\r\n", neerr2.is_high().unwrap());
+    // print_debug_message!("Hello World! {}\r\n", neerr2.is_high().unwrap());
 
     // let dd = p2.reconfigure();
 
@@ -154,12 +149,6 @@ unsafe fn main() -> ! {
     // >; 1] = [Some(pppp)];
 
     // pins_array_oooo[0].as_mut().unwrap().set_high().unwrap();
-
-    let pins_array: [Pin<
-        rp2040_hal::gpio::DynPinId,
-        rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioInput>,
-        rp2040_hal::gpio::DynPullType,
-    >; 1] = [p2];
 
     // // configure LED pin for Pio0.
     // // let led: Pin<_, FunctionPio0, _> = pins.led.into_function();
@@ -214,7 +203,42 @@ unsafe fn main() -> ! {
 
     // --------------------------------------------------------------
     //
-    let mut app = AppDio::new();
+    let pins_id = [
+        // Some(pins.gpio0.into_dyn_pin().id()),
+        // Some(pins.gpio1.into_dyn_pin().id()),
+        None, // 0 debug uart
+        None, // 1 debug uart
+        Some(pins.gpio2.into_dyn_pin().id()),
+        Some(pins.gpio3.into_dyn_pin().id()),
+        Some(pins.gpio4.into_dyn_pin().id()),
+        Some(pins.gpio5.into_dyn_pin().id()),
+        Some(pins.gpio6.into_dyn_pin().id()),
+        Some(pins.gpio7.into_dyn_pin().id()),
+        Some(pins.gpio8.into_dyn_pin().id()),
+        Some(pins.gpio9.into_dyn_pin().id()),
+        Some(pins.gpio10.into_dyn_pin().id()),
+        Some(pins.gpio11.into_dyn_pin().id()),
+        Some(pins.gpio12.into_dyn_pin().id()),
+        Some(pins.gpio13.into_dyn_pin().id()),
+        Some(pins.gpio14.into_dyn_pin().id()),
+        Some(pins.gpio15.into_dyn_pin().id()),
+        Some(pins.gpio16.into_dyn_pin().id()),
+        Some(pins.gpio17.into_dyn_pin().id()),
+        Some(pins.gpio18.into_dyn_pin().id()),
+        Some(pins.gpio19.into_dyn_pin().id()),
+        Some(pins.gpio20.into_dyn_pin().id()),
+        Some(pins.gpio21.into_dyn_pin().id()),
+        Some(pins.gpio22.into_dyn_pin().id()),
+        None,                               // 23
+        None,                               // 24
+        Some(pins.led.into_dyn_pin().id()), // 25 led
+        None,                               // 26
+        None,                               // 27
+        Some(pins.gpio28.into_dyn_pin().id()),
+        None,
+    ];
+
+    let mut app = AppDio::new(pins_id);
     loop {
         // Check for new data
         if usb_dev.poll(&mut [&mut serial]) {

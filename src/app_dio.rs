@@ -4,9 +4,11 @@ use crate::uart_debug::uart_debug_print;
 use crate::{api_dio::PicohaDioAnswer, api_dio::PicohaDioRequest, print_debug_message};
 use core::fmt::Write;
 
+use rp2040_hal::gpio::new_pin;
 // Message deserialization support
 use femtopb::Message;
 
+use rp2040_hal::gpio::DynPinId;
 // USB Communications Class Device support
 use usbd_serial::SerialPort;
 
@@ -37,7 +39,7 @@ pub struct AppDio {
     // Decode buffer
     decode_buffer: [u8; BUFFER_CAPACITY],
 
-    // rp_pins: rp_pico::Pins,
+    pins_id: [Option<DynPinId>; MAX_PINS],
     pins_o: [Option<PinO>; MAX_PINS],
     pins_i: [Option<PinI>; MAX_PINS],
 }
@@ -45,23 +47,43 @@ pub struct AppDio {
 impl AppDio {
     /// Create a new instance of the AppDio
     ///
-    pub fn new() -> Self {
+    pub fn new(pins_id: [Option<DynPinId>; MAX_PINS]) -> Self {
         AppDio {
             in_buf: [0u8; 64],
             in_buf_size: 0,
             decode_buffer: [0u8; 64],
-            // rp_pins: rp_pins,
+            pins_id: pins_id,
             pins_o: [PINO_NONE; MAX_PINS],
             pins_i: [PINI_NONE; MAX_PINS],
         }
     }
 
-    // fn set_pin_as_output(&mut self, pin_num: u32) {
-    //     let pin_num = pin_num as usize;
-    //     if pin_num < MAX_PINS {
-    //         self.pins_o[pin_num] = Some(pin.into_push_pull_output().into_dyn_pin());
-    //     }
-    // }
+    /// Set a pin as output
+    ///
+    fn set_pin_as_output(&mut self, pin_num: u32) {
+        self.pins_id[pin_num as usize]
+            .map(|dyn_id| unsafe {
+                let pin = new_pin(dyn_id);
+                pin.try_into_function::<rp2040_hal::gpio::FunctionSioOutput>()
+                    .and_then(|pin_out| {
+                        self.pins_o[pin_num as usize] = Some(pin_out);
+                        Ok(())
+                    })
+                    // Ignore the error, just a warning
+                    .map_err(|_| {
+                        print_debug_message!(
+                            "      * error converting pin {:?} to output",
+                            pin_num
+                        );
+                    })
+                    .ok();
+            })
+            // Ignore the error, just a warning
+            .ok_or_else(|| {
+                print_debug_message!("      * pin {:?} not available", pin_num);
+            })
+            .ok();
+    }
 
     /// Accumulate new data
     ///
@@ -181,11 +203,17 @@ impl AppDio {
         Self::send_answer(serial, answer);
     }
 
+    /// Process a set pin direction request
+    ///
     fn process_request_set_pin_direction(
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
         print_debug_message!(b"      * processing request: SET_PIN_DIRECTION");
+
+        // self
+        // request.pin_num
+
         let mut answer = PicohaDioAnswer::default();
         answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
         Self::send_answer(serial, answer);
