@@ -6,6 +6,7 @@
 
 // uart debug
 mod uart_debug;
+use rp2040_hal::gpio::new_pin;
 use uart_debug::uart_debug_init;
 use uart_debug::uart_debug_print;
 
@@ -64,24 +65,6 @@ unsafe fn main() -> ! {
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let sio = Sio::new(pac.SIO);
 
-    // let mut cursor = femtopb::Cursor::new();
-    // let rr = mes.encoded_len()
-
-    // let user_factory = NP_Factory::new(
-    //     r#"
-    //     struct({ fields: {
-    //         command: u8({ default: 0 }),
-    //         pin: u8({ default: 0 }),
-    //         value: u8({ default: 0 }),
-    //     }})
-    // "#,
-    // )?;
-    // // close buffer and get internal bytes
-    // let user_bytes: Vec<u8> = user_buffer.finish().bytes();
-
-    // let mut slip = serial_line_ip::Encoder::new();
-    // let mut totals = slip.encode(INPUT_1, &mut output).unwrap();
-
     // External high-speed crystal on the pico board is 12Mhz
     let external_xtal_freq_hz = 12_000_000u32;
     let clocks = init_clocks_and_plls(
@@ -122,6 +105,61 @@ unsafe fn main() -> ! {
     print_debug_message!(b"Hello World!\r\n");
 
     // --------------------------------------------------------------
+    // let pppp: Pin<
+    //     rp2040_hal::gpio::DynPinId,
+    //     rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioOutput>,
+    //     rp2040_hal::gpio::DynPullType,
+    // > = pins
+    //     .led
+    //     .into_push_pull_output()
+    //     .into_pull_type()
+    //     .into_dyn_pin();
+    let p2 = pins
+        .gpio3
+        .into_floating_input()
+        .into_pull_type()
+        .into_dyn_pin();
+
+    let did = pins.led.into_push_pull_output().into_dyn_pin().id();
+    let pppppp = new_pin(did);
+
+    let mut neerr = pppppp
+        .try_into_function::<hal::gpio::FunctionSioOutput>()
+        .ok()
+        .unwrap();
+
+    // let pppppppppppp = neerr.into_push_pull_output();
+
+    neerr.set_high().unwrap();
+
+    delay.delay_ms(2000u32);
+
+    let pppppp2 = new_pin(did);
+
+    let mut neerr2 = pppppp2
+        .try_into_function::<hal::gpio::FunctionSioInput>()
+        .ok()
+        .unwrap();
+
+    print_debug_message!("Hello World! {}\r\n", neerr2.is_high().unwrap());
+
+    // let dd = p2.reconfigure();
+
+    // let mut pins_array_oooo: [Option<
+    //     Pin<
+    //         rp2040_hal::gpio::DynPinId,
+    //         rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioOutput>,
+    //         rp2040_hal::gpio::DynPullType,
+    //     >,
+    // >; 1] = [Some(pppp)];
+
+    // pins_array_oooo[0].as_mut().unwrap().set_high().unwrap();
+
+    let pins_array: [Pin<
+        rp2040_hal::gpio::DynPinId,
+        rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioInput>,
+        rp2040_hal::gpio::DynPullType,
+    >; 1] = [p2];
 
     // // configure LED pin for Pio0.
     // // let led: Pin<_, FunctionPio0, _> = pins.led.into_function();

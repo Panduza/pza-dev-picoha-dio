@@ -13,6 +13,21 @@ use usbd_serial::SerialPort;
 // Size of internal buffers
 const BUFFER_CAPACITY: usize = 64;
 
+const MAX_PINS: usize = 30;
+
+type PinO = rp2040_hal::gpio::Pin<
+    rp2040_hal::gpio::DynPinId,
+    rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioOutput>,
+    rp2040_hal::gpio::DynPullType,
+>;
+const PINO_NONE: Option<PinO> = None;
+type PinI = rp2040_hal::gpio::Pin<
+    rp2040_hal::gpio::DynPinId,
+    rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioInput>,
+    rp2040_hal::gpio::DynPullType,
+>;
+const PINI_NONE: Option<PinI> = None;
+
 /// Application Digital I/O
 pub struct AppDio {
     // Accumulated incoming data buffer
@@ -21,6 +36,10 @@ pub struct AppDio {
     in_buf_size: usize,
     // Decode buffer
     decode_buffer: [u8; BUFFER_CAPACITY],
+
+    // rp_pins: rp_pico::Pins,
+    pins_o: [Option<PinO>; MAX_PINS],
+    pins_i: [Option<PinI>; MAX_PINS],
 }
 
 impl AppDio {
@@ -31,8 +50,18 @@ impl AppDio {
             in_buf: [0u8; 64],
             in_buf_size: 0,
             decode_buffer: [0u8; 64],
+            // rp_pins: rp_pins,
+            pins_o: [PINO_NONE; MAX_PINS],
+            pins_i: [PINI_NONE; MAX_PINS],
         }
     }
+
+    // fn set_pin_as_output(&mut self, pin_num: u32) {
+    //     let pin_num = pin_num as usize;
+    //     if pin_num < MAX_PINS {
+    //         self.pins_o[pin_num] = Some(pin.into_push_pull_output().into_dyn_pin());
+    //     }
+    // }
 
     /// Accumulate new data
     ///
