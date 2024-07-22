@@ -1,18 +1,18 @@
 syntax = "proto3";
 
 enum RequestType {
-    PING = 0;
-    SET_PIN_DIRECTION = 1;
-    SET_PIN_VALUE = 2;
-    GET_PIN_DIRECTION = 3;
-    GET_PIN_VALUE = 4;
+    PING = 1;
+    SET_PIN_DIRECTION = 2;
+    SET_PIN_VALUE = 3;
+    GET_PIN_DIRECTION = 4;
+    GET_PIN_VALUE = 5;
 }
 
 enum PinValue {
-    LOW = 0;
-    HIGH = 1;
-    INPUT = 2;
-    OUTPUT = 3;
+    LOW = 1;
+    HIGH = 2;
+    INPUT = 3;
+    OUTPUT = 4;
 }
 
 message PicohaDioRequest {
@@ -22,11 +22,12 @@ message PicohaDioRequest {
 }
 
 enum AnswerType {
-    SUCCESS = 0;
-    FAILURE = 1;
+    SUCCESS = 1;
+    FAILURE = 2;
 }
 
 message PicohaDioAnswer {
     AnswerType type = 1;
-    optional PinValue value = 3;
+    optional PinValue value = 2;
+    optional String error_message = 3;
 }

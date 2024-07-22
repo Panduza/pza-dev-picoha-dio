@@ -7,6 +7,7 @@ use crate::{
 };
 use core::fmt::Write;
 
+use embedded_hal::digital::OutputPin;
 use rp2040_hal::gpio::new_pin;
 // Message deserialization support
 use femtopb::Message;
@@ -75,22 +76,54 @@ impl DioRequestProcessor {
             .ok();
     }
 
-    /// Try to decode an API request
     ///
-    fn try_to_decode_api_request(frame: &[u8]) -> Option<PicohaDioRequest> {
-        match PicohaDioRequest::decode(frame) {
-            Ok(ppp) => {
-                let mut new_request = PicohaDioRequest::default();
-                new_request.r#type = ppp.r#type;
-                new_request.pin_num = ppp.pin_num;
-                new_request.value = ppp.value;
-                Some(new_request)
-            }
-            Err(e) => {
-                print_debug_message!("      * error decoding request: {:?}", e);
-                None
-            }
-        }
+    ///
+    fn set_pin_as_input(&mut self, pin_num: u32) {
+        self.pins_id[pin_num as usize]
+            .map(|dyn_id| unsafe {
+                let pin = new_pin(dyn_id);
+                pin.try_into_function::<rp2040_hal::gpio::FunctionSioInput>()
+                    .and_then(|pin_in| {
+                        self.pins_i[pin_num as usize] = Some(pin_in);
+                        Ok(())
+                    })
+                    // Ignore the error, just a warning
+                    .map_err(|_| {
+                        print_debug_message!("      * error converting pin {:?} to input", pin_num);
+                    })
+                    .ok();
+            })
+            // Ignore the error, just a warning
+            .ok_or_else(|| {
+                print_debug_message!("      * pin {:?} not available", pin_num);
+            })
+            .ok();
+    }
+
+    fn set_pin_low(&mut self, pin_num: u32) {
+        self.pins_o[pin_num as usize]
+            .as_mut()
+            .map(|pin| {
+                pin.set_low().unwrap();
+            })
+            .ok_or_else(|| {
+                print_debug_message!("      * pin {:?} not available", pin_num);
+            })
+            .ok();
+    }
+
+    ///
+    ///
+    fn set_pin_high(&mut self, pin_num: u32) {
+        self.pins_o[pin_num as usize]
+            .as_mut()
+            .map(|pin| {
+                pin.set_high().unwrap();
+            })
+            .ok_or_else(|| {
+                print_debug_message!("      * pin {:?} not available", pin_num);
+            })
+            .ok();
     }
 
     ///
@@ -109,13 +142,13 @@ impl DioRequestProcessor {
                     self.process_request_set_pin_direction(serial, request)
                 }
                 crate::api_dio::RequestType::SetPinValue => {
-                    Self::process_request_set_pin_value(serial, request)
+                    self.process_request_set_pin_value(serial, request)
                 }
                 crate::api_dio::RequestType::GetPinDirection => {
-                    Self::process_request_get_pin_direction(serial, request)
+                    self.process_request_get_pin_direction(serial, request)
                 }
                 crate::api_dio::RequestType::GetPinValue => {
-                    Self::process_request_get_pin_value(serial, request)
+                    self.process_request_get_pin_value(serial, request)
                 }
             },
             femtopb::EnumValue::Unknown(_) => todo!(),
@@ -141,19 +174,13 @@ impl DioRequestProcessor {
         print_debug_message!(b"      * processing request: SET_PIN_DIRECTION");
 
         match request.value {
-            femtopb::EnumValue::Known(v) => {
-                match v {
-                    crate::api_dio::PinValue::Input => {
-                        //
-                    }
-                    crate::api_dio::PinValue::Output => {
-                        self.set_pin_as_output(request.pin_num);
-                    }
-                    _ => {
-                        print_debug_message!("      * invalid value: {:?}", v);
-                    }
+            femtopb::EnumValue::Known(v) => match v {
+                crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num),
+                crate::api_dio::PinValue::Output => self.set_pin_as_output(request.pin_num),
+                _ => {
+                    print_debug_message!("      * invalid value: {:?}", v);
                 }
-            }
+            },
             femtopb::EnumValue::Unknown(_) => todo!(),
         }
 
@@ -163,16 +190,30 @@ impl DioRequestProcessor {
     }
 
     fn process_request_set_pin_value(
+        &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
         print_debug_message!(b"      * processing request: SET_PIN_VALUE");
+
+        match request.value {
+            femtopb::EnumValue::Known(v) => match v {
+                crate::api_dio::PinValue::Low => self.set_pin_low(request.pin_num),
+                crate::api_dio::PinValue::High => self.set_pin_high(request.pin_num),
+                _ => {
+                    print_debug_message!("      * invalid value: {:?}", v);
+                }
+            },
+            femtopb::EnumValue::Unknown(_) => todo!(),
+        }
+
         let mut answer = PicohaDioAnswer::default();
         answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
         Self::send_answer(serial, answer);
     }
 
     fn process_request_get_pin_direction(
+        &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
@@ -183,6 +224,7 @@ impl DioRequestProcessor {
     }
 
     fn process_request_get_pin_value(
+        &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
