@@ -13,7 +13,13 @@ use uart_debug::uart_debug_print;
 // application logic
 mod api_dio_utils;
 mod app_dio;
+mod dio_request_buffer;
+mod dio_request_processor;
+
 use app_dio::AppDio;
+
+use dio_request_buffer::DioRequestBuffer;
+use dio_request_processor::DioRequestProcessor;
 
 use bsp::entry;
 // use defmt::*;
@@ -238,7 +244,8 @@ unsafe fn main() -> ! {
         None,
     ];
 
-    let mut app = AppDio::new(pins_id);
+    let mut request_buffer = DioRequestBuffer::new();
+    let mut request_processor = DioRequestProcessor::new(pins_id);
     loop {
         // Check for new data
         if usb_dev.poll(&mut [&mut serial]) {
@@ -251,7 +258,13 @@ unsafe fn main() -> ! {
                     // Do nothing
                 }
                 Ok(count) => {
-                    app.process_incoming_data(&mut serial, &buf[..count]);
+                    let data = &buf[..count];
+                    print_debug_message!("+ recieved data: {:?}", data);
+                    request_buffer.accumulate_new_data(data);
+                    while let Some(request) = request_buffer.try_to_decode_buffer() {
+                        print_debug_message!("+ process request: {:?}", request);
+                        request_processor.process_request(&mut serial, request);
+                    }
                 }
             }
         }
