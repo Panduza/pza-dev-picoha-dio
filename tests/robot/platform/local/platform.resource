@@ -8,6 +8,7 @@ Variables    platform_data.py
 
 # All Library must be imported here
 Library      usb_keywords.py
+Library      serial_keywords.py
 
 *** Keywords ***
 
