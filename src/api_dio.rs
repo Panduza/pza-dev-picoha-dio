@@ -15,8 +15,10 @@ pub struct PicohaDioRequest<'a> {
 pub struct PicohaDioAnswer<'a> {
     #[femtopb(enumeration, tag = 1)]
     pub r#type: ::femtopb::enumeration::EnumValue<AnswerType>,
-    #[femtopb(enumeration, optional, tag = 3)]
+    #[femtopb(enumeration, optional, tag = 2)]
     pub value: ::core::option::Option<::femtopb::enumeration::EnumValue<PinValue>>,
+    #[femtopb(string, optional, tag = 3)]
+    pub error_message: ::core::option::Option<&'a str>,
     #[femtopb(unknown_fields)]
     pub unknown_fields: femtopb::UnknownFields<'a>,
 }

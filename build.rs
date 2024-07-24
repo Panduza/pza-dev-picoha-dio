@@ -33,7 +33,7 @@ fn main() {
     // `memory.x` is changed.
     println!("cargo:rerun-if-changed=memory.x");
 
-    if !Path::new("src/api_dio.proto").exists() {
+    if !Path::new("src/api_dio.rs").exists() {
         femtopb_build::compile_protos_into(&["src/api_dio.proto"], &["src"], "src").unwrap();
         fs::rename("src/_.rs", "src/api_dio.rs").unwrap();
     }

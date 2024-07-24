@@ -6,12 +6,15 @@ Library      Collections
 # All variables must be defined here
 Variables    platform_data.py
 
+# All Library must be imported here
+Library      usb_keywords.py
+
 *** Keywords ***
 
 Main Test Platform Setup
     Set Log Level    DEBUG
-    Log     "Template Setup"
+    Log     "Demo Setup"
 
 Main Test Platform Cleanup
-    Log     "Template Cleanup"
+    Log     "Demo Cleanup"
 

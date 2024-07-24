@@ -1,8 +1,9 @@
 # robot-framework-template
 
-Panduza Robot Template is based on tips from robot framework documentation:
 
-- https://docs.robotframework.org/docs/examples/project_structure
+```bash
+protoc -I=src --python_out="tests\robot\libraries" src/api_dio.proto
+```
 
 <!-- ---------------------------------------------------------------- -->
 <!-- ---------------------------------------------------------------- -->
