@@ -6,11 +6,19 @@ license = "MIT OR Apache-2.0"
 
 
 [[test]]
-name = "example" # this should be the same as the filename of your test target
-harness = false  # allows Cucumber to print output instead of libtest
+name = "ping"
+harness = false
+
+[[test]]
+name = "set_pins"
+harness = false   # allows Cucumber to print output instead of libtest
 
 
 [dev-dependencies]
+
+# Main async framework for the platform
+tokio = { version = "1", features = ["full", "tracing"] }
+tokio-serial = "5.4.1"
+
 cucumber = "0.21.1"
 futures = "0.3"
-
