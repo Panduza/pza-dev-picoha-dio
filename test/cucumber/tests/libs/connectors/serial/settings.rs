@@ -12,7 +12,7 @@ use crate::UsbSettings;
 
 /// Settings for the serial connector
 ///
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Settings {
     /// The serial port name
     pub port_name: Option<String>,

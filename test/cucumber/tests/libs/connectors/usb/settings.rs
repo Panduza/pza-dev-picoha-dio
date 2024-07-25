@@ -2,6 +2,7 @@
 static USB_SERIAL_KEY: &str = "usb_serial";
 
 /// Usb settings for devices
+#[derive(Debug)]
 pub struct Settings {
     /// VID
     pub vendor: Option<u16>,

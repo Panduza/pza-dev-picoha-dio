@@ -64,6 +64,9 @@ impl DioRequestBuffer {
 
         // Update the buffer size
         self.in_buf_size += data_len;
+
+        //
+        print_debug_message!("+ accumulated: {:?}", self.in_buf[..self.in_buf_size]);
     }
 
     /// Try to decode an API request

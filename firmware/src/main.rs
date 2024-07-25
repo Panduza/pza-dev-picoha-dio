@@ -108,82 +108,7 @@ unsafe fn main() -> ! {
         )
         .unwrap();
     uart_debug_init(uart_debug);
-    print_debug_message!(b"Hello World!\r\n");
-
-    // --------------------------------------------------------------
-    // let pppp: Pin<
-    //     rp2040_hal::gpio::DynPinId,
-    //     rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioOutput>,
-    //     rp2040_hal::gpio::DynPullType,
-    // > = pins
-    //     .led
-    //     .into_push_pull_output()
-    //     .into_pull_type()
-    //     .into_dyn_pin();
-
-    // let did: rp2040_hal::gpio::DynPinId = pins.led.into_push_pull_output().into_dyn_pin().id();
-    // let pppppp = new_pin(did);
-
-    // let mut neerr = pppppp
-    //     .try_into_function::<hal::gpio::FunctionSioOutput>()
-    //     .ok()
-    //     .unwrap();
-
-    // let pppppppppppp = neerr.into_push_pull_output();
-
-    // neerr.set_high().unwrap();
-
-    // delay.delay_ms(2000u32);
-
-    // let pppppp2 = new_pin(did);
-
-    // let mut neerr2 = pppppp2
-    //     .try_into_function::<hal::gpio::FunctionSioInput>()
-    //     .ok()
-    //     .unwrap();
-
-    // print_debug_message!("Hello World! {}\r\n", neerr2.is_high().unwrap());
-
-    // let dd = p2.reconfigure();
-
-    // let mut pins_array_oooo: [Option<
-    //     Pin<
-    //         rp2040_hal::gpio::DynPinId,
-    //         rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioOutput>,
-    //         rp2040_hal::gpio::DynPullType,
-    //     >,
-    // >; 1] = [Some(pppp)];
-
-    // pins_array_oooo[0].as_mut().unwrap().set_high().unwrap();
-
-    // // configure LED pin for Pio0.
-    // // let led: Pin<_, FunctionPio0, _> = pins.led.into_function();
-    // let p0: Pin<_, FunctionPio0, _> = pins.gpio0.into_function();
-
-    // let p1: Pin<_, FunctionPio0, _> = pins.gpio1.into_function(); // data
-    //                                                               // PIN id for use inside of PIO
-
-    // let mut piiii = pins.led.into_inout();
-
-    // Use GPIO 28 as an InOutPin
-    // let mut pin = pins.led.into_push_pull_output().into_dyn_pin();
-
-    // pin.
-    // let _ = pin.set_low();
-
-    // pin.is_high().unwrap();
-
-    // .into_push_pull_output()
-    // // .into_floating_input()
-    // .into_dyn_pin();
-
-    // piiii.set_output_disable(disable)
-    // piiii.set_high().unwrap();
-
-    // let led_pin_id = led.id().num;
-    // let led_pin_id = 25;
-    // let led_pin_id = 0; // mck
-    // let data_pin = 1; // data
+    print_debug_message!(b"Firmware Start!\r\n");
 
     // --------------------------------------------------------------
     // USB CDC
@@ -259,7 +184,7 @@ unsafe fn main() -> ! {
                 }
                 Ok(count) => {
                     let data = &buf[..count];
-                    print_debug_message!("+ recieved data: {:?}", data);
+                    print_debug_message!("+ recieved: {:?}", data);
                     request_buffer.accumulate_new_data(data);
                     while let Some(request) = request_buffer.try_to_decode_buffer() {
                         print_debug_message!("+ process request: {:?}", request);
