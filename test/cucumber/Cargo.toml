@@ -1,0 +1,16 @@
+[package]
+edition = "2021"
+name = "tests"
+version = "0.0.0"
+license = "MIT OR Apache-2.0"
+
+
+[[test]]
+name = "example" # this should be the same as the filename of your test target
+harness = false  # allows Cucumber to print output instead of libtest
+
+
+[dev-dependencies]
+cucumber = "0.21.1"
+futures = "0.3"
+
