@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::api_dio::PicohaDioAnswer;
 use super::connectors::SerialSettings;
 use super::connectors::UsbSettings;
@@ -15,7 +17,7 @@ use tracing;
 
 // `World` is your shared, likely mutable state.
 // Cucumber constructs it via `Default::default()` for each scenario.
-#[derive(Debug, World)]
+#[derive(World)]
 pub struct PiochaWorld {
     pub usb_settings: UsbSettings,
     pub serial_settings: SerialSettings,
@@ -25,7 +27,23 @@ pub struct PiochaWorld {
     // Keep track of number of data in the buffer
     pub in_buf_size: usize,
 
+    decode_buffer: serial_line_ip::DecoderBuffer<512>,
+
     pub last_answer: Option<PicohaDioAnswer>,
+}
+
+impl Debug for PiochaWorld {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PiochaWorld")
+            .field("usb_settings", &self.usb_settings)
+            .field("serial_settings", &self.serial_settings)
+            .field("serial_stream", &self.serial_stream)
+            .field("in_buf", &self.in_buf)
+            .field("in_buf_size", &self.in_buf_size)
+            // .field("decode_buffer", &self.decode_buffer)
+            .field("last_answer", &self.last_answer)
+            .finish()
+    }
 }
 
 impl PiochaWorld {
@@ -87,36 +105,37 @@ impl PiochaWorld {
 
         // Read the response until "end"
         loop {
+            let mut chunk_buffer = [0u8; 512];
+
             // Read a chunck
-            self.in_buf_size += self
+            let read_size = self
                 .serial_stream
                 .as_mut()
                 .ok_or_else(|| format!("No serial stream"))?
-                .read(&mut self.in_buf[self.in_buf_size..])
+                .read(&mut chunk_buffer)
                 .await
                 .map_err(|e| format!("Unable to read on serial stream {:?}", e))?;
 
-            tracing::info!(
-                "Recieved data total buffer: {:?}",
-                &self.in_buf[..self.in_buf_size]
-            );
-
-            // Try decoding
-            let mut slip_decoder = serial_line_ip::Decoder::new();
-            let (total_decoded_from_rx_buffer, out_slice, end) = slip_decoder
-                .decode(&self.in_buf[..self.in_buf_size], response)
-                .map_err(|e| format!("Unable to decode response: {:?}", e))?;
-
-            // // Shift data inside the in_buf to the left
-            // let in_buf = &mut self.in_buf;
-            // in_buf.copy_within(total_decoded_from_rx_buffer..self.in_buf_size, 0);
-            // self.in_buf_size -= total_decoded_from_rx_buffer;
-
-            if end {
-                tracing::info!("SLIP decoding ok: {:?}", out_slice.len());
-                return Ok(out_slice.len());
+            let data = &chunk_buffer[..read_size];
+            match self.decode_buffer.feed(data) {
+                core::prelude::v1::Ok((nb_bytes_processed, found_trame_complete)) => {
+                    if found_trame_complete {
+                        // let trame = self.decode_buffer.slice();
+                        // let request = try_to_decode_api_request(trame).unwrap();
+                        // print_debug_message!("+ process request: {:?}", request);
+                        // request_processor.process_request(&mut serial, request);
+                        break;
+                    }
+                }
+                _ => {}
             }
         }
+
+        let trame_size = self.decode_buffer.slice().len();
+        response[..trame_size].copy_from_slice(self.decode_buffer.slice());
+
+        self.decode_buffer.reset();
+        Ok(trame_size)
     }
 }
 
@@ -136,6 +155,7 @@ impl std::default::Default for PiochaWorld {
             in_buf: [0u8; 512],
             in_buf_size: 0,
             last_answer: None,
+            decode_buffer: serial_line_ip::DecoderBuffer::new(),
         }
     }
 }

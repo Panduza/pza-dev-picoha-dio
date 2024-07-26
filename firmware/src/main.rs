@@ -6,29 +6,28 @@
 
 // uart debug
 mod uart_debug;
-use rp2040_hal::gpio::new_pin;
+// use rp2040_hal::gpio::new_pin;
 use uart_debug::uart_debug_init;
 use uart_debug::uart_debug_print;
 
+use crate::{api_dio::PicohaDioAnswer, api_dio::PicohaDioRequest};
 // application logic
 mod api_dio_utils;
-mod dio_request_buffer;
 mod dio_request_processor;
 
-use dio_request_buffer::DioRequestBuffer;
 use dio_request_processor::DioRequestProcessor;
 
 use bsp::entry;
 // use defmt::*;
 // use defmt_rtt as _;
-use embedded_hal::digital::{InputPin, OutputPin};
+// use embedded_hal::digital::{InputPin, OutputPin};
 use femtopb::Message;
 mod api_dio;
 // use panic_probe as _;
 
 use fugit::RateExtU32;
 use rp2040_hal::{
-    pio::PIOExt,
+    // pio::PIOExt,
     uart::{DataBits, StopBits, UartConfig, UartPeripheral},
 };
 // USB Device support
@@ -42,7 +41,7 @@ use rp_pico::hal;
 
 // Used to demonstrate writing formatted strings
 use core::fmt::Write;
-use heapless::String;
+// use heapless::String;
 
 // Provide an alias for our BSP so we can switch targets quickly.
 // Uncomment the BSP you included in Cargo.toml, the rest of the code does not need to change.
@@ -166,7 +165,9 @@ unsafe fn main() -> ! {
         None,
     ];
 
-    let mut request_buffer = DioRequestBuffer::new();
+    // let mut request_buffer = DioRequestBuffer::new();
+    let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =
+        serial_line_ip::DecoderBuffer::new();
     let mut request_processor = DioRequestProcessor::new(pins_id);
     loop {
         // Check for new data
@@ -180,15 +181,51 @@ unsafe fn main() -> ! {
                     // Do nothing
                 }
                 Ok(count) => {
-                    let data = &buf[..count];
+                    let mut data = &buf[..count];
                     print_debug_message!("+ recieved: {:?}", data);
-                    request_buffer.accumulate_new_data(data);
-                    while let Some(request) = request_buffer.try_to_decode_buffer() {
-                        print_debug_message!("+ process request: {:?}", request);
-                        request_processor.process_request(&mut serial, request);
+
+                    loop {
+                        // Check if we have enough data to decode
+                        match decode_buffer.feed(data) {
+                            core::prelude::v1::Ok((nb_bytes_processed, found_trame_complete)) => {
+                                if found_trame_complete {
+                                    let trame = decode_buffer.slice();
+                                    let request = try_to_decode_api_request(trame).unwrap();
+                                    print_debug_message!("+ process request: {:?}", request);
+                                    request_processor.process_request(&mut serial, request);
+                                    decode_buffer.reset();
+                                    data = &buf[..count - nb_bytes_processed];
+                                } else {
+                                    break;
+                                }
+                            }
+                            _ => {
+                                break;
+                            }
+                        }
+
+                        // Try to parse a request from the buffer
                     }
                 }
             }
+        }
+    }
+}
+
+/// Try to decode an API request
+///
+fn try_to_decode_api_request(frame: &[u8]) -> Option<PicohaDioRequest> {
+    match PicohaDioRequest::decode(frame) {
+        Ok(ppp) => {
+            let mut new_request = PicohaDioRequest::default();
+            new_request.r#type = ppp.r#type;
+            new_request.pin_num = ppp.pin_num;
+            new_request.value = ppp.value;
+            Some(new_request)
+        }
+        Err(e) => {
+            print_debug_message!("      * error decoding request: {:?}", e);
+            None
         }
     }
 }
