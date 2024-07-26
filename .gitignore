@@ -4,6 +4,8 @@
 Cargo.lock
 target/
 
+interactive_console_output.xml
+
 # editor files
 .vscode/*
 !.vscode/*.md

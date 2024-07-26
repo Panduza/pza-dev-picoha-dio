@@ -6,11 +6,14 @@
 
 // uart debug
 mod uart_debug;
+use rp2040_hal::gpio::DynPinId;
 // use rp2040_hal::gpio::new_pin;
+#[cfg(any(feature = "uart0_debug"))]
 use uart_debug::uart_debug_init;
+#[cfg(any(feature = "uart0_debug"))]
 use uart_debug::uart_debug_print;
 
-use crate::{api_dio::PicohaDioAnswer, api_dio::PicohaDioRequest};
+use crate::api_dio::PicohaDioRequest;
 // application logic
 mod api_dio_utils;
 mod dio_request_processor;
@@ -18,14 +21,16 @@ mod dio_request_processor;
 use dio_request_processor::DioRequestProcessor;
 
 use bsp::entry;
-// use defmt::*;
-// use defmt_rtt as _;
-// use embedded_hal::digital::{InputPin, OutputPin};
 use femtopb::Message;
 mod api_dio;
-// use panic_probe as _;
 
+// Used to demonstrate writing formatted strings
+#[cfg(any(feature = "uart0_debug"))]
+use core::fmt::Write;
+
+#[cfg(any(feature = "uart0_debug"))]
 use fugit::RateExtU32;
+#[cfg(any(feature = "uart0_debug"))]
 use rp2040_hal::{
     // pio::PIOExt,
     uart::{DataBits, StopBits, UartConfig, UartPeripheral},
@@ -38,10 +43,6 @@ use usbd_serial::SerialPort;
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
 use rp_pico::hal;
-
-// Used to demonstrate writing formatted strings
-use core::fmt::Write;
-// use heapless::String;
 
 // Provide an alias for our BSP so we can switch targets quickly.
 // Uncomment the BSP you included in Cargo.toml, the rest of the code does not need to change.
@@ -81,8 +82,8 @@ unsafe fn main() -> ! {
     .ok()
     .unwrap();
 
-    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    // let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    // let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     // --------------------------------------------------------------
     // Get pins of the systems
@@ -96,14 +97,18 @@ unsafe fn main() -> ! {
     // --------------------------------------------------------------
     // Init uart debug
     // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
-    let uart_debug_pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
-    let uart_debug = UartPeripheral::new(pac.UART0, uart_debug_pins, &mut pac.RESETS)
-        .enable(
-            UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
-            clocks.peripheral_clock.freq(),
-        )
-        .unwrap();
-    uart_debug_init(uart_debug);
+    #[cfg(any(feature = "uart0_debug"))]
+    {
+        let uart_debug_pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
+        let uart_debug = UartPeripheral::new(pac.UART0, uart_debug_pins, &mut pac.RESETS)
+            .enable(
+                UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
+                clocks.peripheral_clock.freq(),
+            )
+            .unwrap();
+        uart_debug_init(uart_debug);
+    }
+
     print_debug_message!(b"Firmware Start!\r\n");
 
     // --------------------------------------------------------------
@@ -130,9 +135,7 @@ unsafe fn main() -> ! {
 
     // --------------------------------------------------------------
     //
-    let pins_id = [
-        // Some(pins.gpio0.into_dyn_pin().id()),
-        // Some(pins.gpio1.into_dyn_pin().id()),
+    let mut pins_id: [Option<DynPinId>; 30] = [
         None, // 0 debug uart
         None, // 1 debug uart
         Some(pins.gpio2.into_dyn_pin().id()),
@@ -164,6 +167,11 @@ unsafe fn main() -> ! {
         Some(pins.gpio28.into_dyn_pin().id()),
         None,
     ];
+    #[cfg(not(any(feature = "uart0_debug")))]
+    {
+        pins_id[0] = Some(pins.gpio0.into_dyn_pin().id()); // 0 debug uart
+        pins_id[1] = Some(pins.gpio1.into_dyn_pin().id());
+    }
 
     // let mut request_buffer = DioRequestBuffer::new();
     let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =
@@ -182,6 +190,7 @@ unsafe fn main() -> ! {
                 }
                 Ok(count) => {
                     let mut data = &buf[..count];
+                    print_debug_message!(b"========================\r\n");
                     print_debug_message!("+ recieved: {:?}", data);
 
                     loop {

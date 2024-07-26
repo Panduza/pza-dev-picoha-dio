@@ -135,3 +135,9 @@ async fn i_send_a_corrupted_data_to_the_device(world: &mut PiochaWorld) {
 
     let _size = world.just_write(&data).await.unwrap();
 }
+
+#[when(expr = "I wait for 2 seconds")]
+async fn wait_2_sec(world: &mut PiochaWorld) {
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+}
+

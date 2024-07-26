@@ -1,9 +1,11 @@
 // Print debug support
-use crate::{api_dio::PicohaDioRequest, print_debug_message};
-use core::fmt::{self, Write};
+use crate::api_dio::PicohaDioRequest;
+use core::fmt::{self};
 
-// Message deserialization support
-use femtopb::Message;
+// #[cfg(any(feature = "uart0_debug"))]
+// use crate::print_debug_message;
+// #[cfg(any(feature = "uart0_debug"))]
+// use core::fmt::Write;
 
 impl fmt::Debug for PicohaDioRequest<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

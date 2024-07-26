@@ -1,10 +1,14 @@
-use rp_pico as bsp;
-
+#[cfg(any(feature = "uart0_debug"))]
 use bsp::hal::pac;
+#[cfg(any(feature = "uart0_debug"))]
 use rp2040_hal::uart::UartPeripheral;
+#[cfg(any(feature = "uart0_debug"))]
+use rp_pico as bsp;
+#[cfg(any(feature = "uart0_debug"))]
 use rp_pico::hal::gpio::Pin;
 
 /// Type alias for the UART peripheral 0
+#[cfg(any(feature = "uart0_debug"))]
 type UartType = UartPeripheral<
     rp2040_hal::uart::Enabled,
     pac::UART0,
@@ -22,14 +26,17 @@ type UartType = UartPeripheral<
     ),
 >;
 
+#[cfg(any(feature = "uart0_debug"))]
 static mut DEBUG_UART: Option<UartType> = None;
 
+#[cfg(any(feature = "uart0_debug"))]
 pub fn uart_debug_init(uart: UartType) {
     unsafe {
         DEBUG_UART = Some(uart);
     }
 }
 
+#[cfg(any(feature = "uart0_debug"))]
 pub fn uart_debug_print(data: &[u8]) {
     unsafe {
         if let Some(uart) = DEBUG_UART.as_ref() {
@@ -39,6 +46,15 @@ pub fn uart_debug_print(data: &[u8]) {
 }
 
 #[macro_export]
+#[cfg(not(any(feature = "uart0_debug")))]
+macro_rules! print_debug_message {
+    ($fmt:expr) => {{}};
+    ($fmt:expr, $arg0:expr) => {{}};
+    ($fmt:expr, $arg0:expr, $arg1:expr) => {{}};
+}
+
+#[macro_export]
+#[cfg(any(feature = "uart0_debug"))]
 macro_rules! print_debug_message {
     ($fmt:expr) => {{
         uart_debug_print($fmt);

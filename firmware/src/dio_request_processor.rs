@@ -1,5 +1,6 @@
 // Print debug support
 use crate::api_dio_utils;
+#[cfg(any(feature = "uart0_debug"))]
 use crate::uart_debug::uart_debug_print;
 use crate::{
     api_dio::{PicohaDioAnswer, PicohaDioRequest},
@@ -52,6 +53,7 @@ impl DioRequestProcessor {
     /// Set a pin as output
     ///
     fn set_pin_as_output(&mut self, pin_num: u32) {
+        print_debug_message!("\tset pin {:?} as output", pin_num);
         self.pins_id[pin_num as usize]
             .map(|dyn_id| unsafe {
                 let pin = new_pin(dyn_id);
@@ -76,14 +78,17 @@ impl DioRequestProcessor {
             .ok();
     }
 
-    ///
+    /// Set a pin as input
     ///
     fn set_pin_as_input(&mut self, pin_num: u32) {
+        print_debug_message!("\tset pin {:?} as input", pin_num);
         self.pins_id[pin_num as usize]
             .map(|dyn_id| unsafe {
                 let pin = new_pin(dyn_id);
                 pin.try_into_function::<rp2040_hal::gpio::FunctionSioInput>()
-                    .and_then(|pin_in| {
+                    .and_then(|mut pin_in| {
+                        // pin_in.set_pull_type(rp2040_hal::gpio::DynPullType::None);
+                        pin_in.set_pull_type(rp2040_hal::gpio::DynPullType::Down);
                         self.pins_i[pin_num as usize] = Some(pin_in);
                         Ok(())
                     })
@@ -100,30 +105,34 @@ impl DioRequestProcessor {
             .ok();
     }
 
-    fn set_pin_low(&mut self, pin_num: u32) {
+    /// Set a pin low
+    ///
+    fn set_pin_low(&mut self, pin_num: u32) -> Result<(), &'static str> {
         self.pins_o[pin_num as usize]
             .as_mut()
             .map(|pin| {
                 pin.set_low().unwrap();
             })
             .ok_or_else(|| {
-                print_debug_message!("      * pin {:?} not available", pin_num);
-            })
-            .ok();
+                print_debug_message!("\t!!!pin {:?} not available", pin_num);
+                "Pin not available"
+            })?;
+        Ok(())
     }
 
+    /// Set a pin high
     ///
-    ///
-    fn set_pin_high(&mut self, pin_num: u32) {
+    fn set_pin_high(&mut self, pin_num: u32) -> Result<(), &'static str> {
         self.pins_o[pin_num as usize]
             .as_mut()
             .map(|pin| {
                 pin.set_high().unwrap();
             })
             .ok_or_else(|| {
-                print_debug_message!("      * pin {:?} not available", pin_num);
-            })
-            .ok();
+                print_debug_message!("\t!!!pin {:?} not available", pin_num);
+                "Pin not available"
+            })?;
+        Ok(())
     }
 
     ///
@@ -189,26 +198,36 @@ impl DioRequestProcessor {
         Self::send_answer(serial, answer);
     }
 
+    /// Process a set pin value request
+    ///
     fn process_request_set_pin_value(
         &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
-        print_debug_message!(b"      * processing request: SET_PIN_VALUE\r\n");
-
-        match request.value {
+        print_debug_message!(b"\tprocessing request: SET_PIN_VALUE\r\n");
+        let r = match request.value {
             femtopb::EnumValue::Known(v) => match v {
                 crate::api_dio::PinValue::Low => self.set_pin_low(request.pin_num),
                 crate::api_dio::PinValue::High => self.set_pin_high(request.pin_num),
                 _ => {
-                    print_debug_message!("      * invalid value: {:?}", v);
+                    print_debug_message!("\t!!! invalid value: {:?}", v);
+                    Err("Invalid value")
                 }
             },
             femtopb::EnumValue::Unknown(_) => todo!(),
-        }
+        };
 
         let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        match r {
+            Ok(_) => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+            }
+            Err(e) => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                answer.error_message = Some(e);
+            }
+        }
         Self::send_answer(serial, answer);
     }
 
