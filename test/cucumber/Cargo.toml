@@ -10,8 +10,12 @@ name = "ping"
 harness = false
 
 [[test]]
-name = "set_pins"
-harness = false   # allows Cucumber to print output instead of libtest
+name = "control_pins"
+harness = false       # allows Cucumber to print output instead of libtest
+
+[[test]]
+name = "robustness"
+harness = false     # allows Cucumber to print output instead of libtest
 
 
 [dev-dependencies]
@@ -19,7 +23,9 @@ harness = false   # allows Cucumber to print output instead of libtest
 # Main async framework for the platform
 tokio = { version = "1", features = ["full", "tracing"] }
 tokio-serial = "5.4.1"
+# tokio-serial = { git = "https://github.com/berkowski/tokio-serial", branch = "master" }
 
+rand = "0.8"
 cucumber = { version = "0.21.1", features = ["tracing", "timestamps"] }
 futures = "0.3"
 

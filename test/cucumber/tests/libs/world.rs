@@ -47,6 +47,21 @@ impl Debug for PiochaWorld {
 }
 
 impl PiochaWorld {
+    pub async fn just_write(&mut self, command: &[u8]) -> Result<(), String> {
+        tracing::info!("Sending command: {:?}", command);
+
+        // Send the command
+        let _ = self
+            .serial_stream
+            .as_mut()
+            .ok_or_else(|| format!("No serial stream"))?
+            .write(&command)
+            .await
+            .map_err(|e| format!("Unable to write on serial stream: {}", e));
+
+        Ok(())
+    }
+
     /// Lock the connector to write a command then wait for the answers
     ///
     pub async fn write_then_read(
@@ -118,7 +133,7 @@ impl PiochaWorld {
 
             let data = &chunk_buffer[..read_size];
             match self.decode_buffer.feed(data) {
-                core::prelude::v1::Ok((nb_bytes_processed, found_trame_complete)) => {
+                core::prelude::v1::Ok((_nb_bytes_processed, found_trame_complete)) => {
                     if found_trame_complete {
                         // let trame = self.decode_buffer.slice();
                         // let request = try_to_decode_api_request(trame).unwrap();

@@ -99,7 +99,7 @@ unsafe fn main() -> ! {
     let uart_debug_pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
     let uart_debug = UartPeripheral::new(pac.UART0, uart_debug_pins, &mut pac.RESETS)
         .enable(
-            UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
+            UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();

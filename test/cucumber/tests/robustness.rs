@@ -9,6 +9,6 @@ use libs::world::PiochaWorld;
 async fn main() {
     PiochaWorld::cucumber()
         .init_tracing()
-        .run("features/ping.feature")
+        .run("features/robustness.feature")
         .await;
 }
