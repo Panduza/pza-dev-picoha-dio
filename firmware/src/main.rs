@@ -12,11 +12,8 @@ use uart_debug::uart_debug_print;
 
 // application logic
 mod api_dio_utils;
-mod app_dio;
 mod dio_request_buffer;
 mod dio_request_processor;
-
-use app_dio::AppDio;
 
 use dio_request_buffer::DioRequestBuffer;
 use dio_request_processor::DioRequestProcessor;

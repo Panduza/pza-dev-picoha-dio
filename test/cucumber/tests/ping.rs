@@ -1,33 +1,16 @@
 mod libs;
+use libs::api_dio::AnswerType;
+use libs::api_dio::PicohaDioAnswer;
 use libs::connectors::UsbSettings;
-use libs::connectors::SerialSettings;
 
 use libs::api_dio::PicohaDioRequest;
 use libs::api_dio::RequestType;
 
-use cucumber::{given, when, then, World};
+use cucumber::{given, then, when, World};
 use prost::Message;
-use tokio::io::AsyncReadExt;
-use tokio::io::AsyncWriteExt;
-use tokio::time::timeout;
 use tokio_serial::SerialStream;
 
-
 use libs::world::PiochaWorld;
-
-// // These `Cat` definitions would normally be inside your project's code, 
-// // not test code, but we create them here for the show case.
-// #[derive(Debug, Default)]
-// struct  {
-//     pub hungry: bool,
-// }
-
-// impl Cat {
-//     fn feed(&mut self) {
-//         self.hungry = false;
-//     }
-// }
-
 
 // Steps are defined with `given`, `when` and `then` attributes.
 #[given("a serial connection to the device opened")]
@@ -47,9 +30,8 @@ async fn open_connection(world: &mut PiochaWorld) {
         .flow_control(world.serial_settings.flow_control);
 
     // Build the stream
-    world.serial_stream = Some(
-        SerialStream::open(&serial_builder).expect("Failed to open serial port"),
-    );
+    world.serial_stream =
+        Some(SerialStream::open(&serial_builder).expect("Failed to open serial port"));
 }
 
 #[when("I send a ping command to the device")]
@@ -57,20 +39,29 @@ async fn send_ping(world: &mut PiochaWorld) {
     let mut request = PicohaDioRequest::default();
     request.set_type(RequestType::Ping);
 
+    let answer_buffer = &mut [0u8; 1024];
+    let size = world
+        .write_then_read(&request.encode_to_vec(), answer_buffer)
+        .await
+        .unwrap();
 
-    world.write_then_read(&request.encode_to_vec(), &mut [0u8; 1024]).await.unwrap();
+    // Decode the answer
+    let answer_slice = answer_buffer[..size].as_ref();
+    println!("Received {} bytes -> {:?}", size, answer_slice);
+    let answer = PicohaDioAnswer::decode(answer_slice).unwrap();
+    world.last_answer = Some(answer);
+}
 
-    // let serial_stream = world
-    //     .serial_stream
-    //     .as_mut()
-    //     .expect("Serial stream is not set");
-
-    // request.send(serial_stream).await;
+#[then("I must receive a SUCCESS response from the device")]
+async fn receive_success(world: &mut PiochaWorld) {
+    let answer = world.last_answer.as_ref().unwrap();
+    assert_eq!(answer.r#type, AnswerType::Success as i32);
 }
 
 #[tokio::main]
 async fn main() {
-    PiochaWorld::run(
-        "features/ping.feature",
-    ).await;
+    PiochaWorld::cucumber()
+        .init_tracing()
+        .run("features/ping.feature")
+        .await;
 }

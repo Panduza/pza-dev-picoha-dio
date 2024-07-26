@@ -49,12 +49,12 @@ impl Settings {
         }
     }
 
-    /// Set the port name
-    ///
-    pub fn set_port_name<A: Into<String>>(mut self, port_name: A) -> Self {
-        self.port_name = Some(port_name.into());
-        self
-    }
+    // /// Set the port name
+    // ///
+    // pub fn set_port_name<A: Into<String>>(mut self, port_name: A) -> Self {
+    //     self.port_name = Some(port_name.into());
+    //     self
+    // }
 
     /// Try to set the port name from usb_settings
     ///
@@ -75,9 +75,7 @@ impl Settings {
 
     /// Try to find a serial port name that match usb settings
     ///
-    pub fn find_port_name_from_usb_settings(
-        usb_settings: &UsbSettings,
-    ) -> Result<String, String> {
+    pub fn find_port_name_from_usb_settings(usb_settings: &UsbSettings) -> Result<String, String> {
         Self::find_serial_port_info_from_usb_settings(usb_settings).map(|info| info.port_name)
     }
 
@@ -167,17 +165,16 @@ impl Settings {
             "{} - match: {} vid: {} pid: {} serial: {}",
             usb_settings, matchhh, match_vid, match_pid, match_serial
         );
+        tracing::info!("{}", trace_message);
 
         // Ok only if all the conditions are met
         return matchhh;
     }
 
-    /// Set the flow control
-    ///
-    pub fn set_data_bits(mut self, data_bits: DataBits) -> Self {
-        self.data_bits = data_bits;
-        self
-    }
+    // pub fn set_data_bits(mut self, data_bits: DataBits) -> Self {
+    //     self.data_bits = data_bits;
+    //     self
+    // }
 
     /// Set the read timeout
     ///
@@ -186,10 +183,8 @@ impl Settings {
         self
     }
 
-    /// Set time lock duration
-    ///
-    pub fn set_time_lock_duration(mut self, time_lock_duration: Duration) -> Self {
-        self.time_lock_duration = Some(time_lock_duration);
-        self
-    }
+    // pub fn set_time_lock_duration(mut self, time_lock_duration: Duration) -> Self {
+    //     self.time_lock_duration = Some(time_lock_duration);
+    //     self
+    // }
 }

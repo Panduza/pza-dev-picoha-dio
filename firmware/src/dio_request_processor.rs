@@ -158,9 +158,9 @@ impl DioRequestProcessor {
     /// Process a ping request
     ///
     fn process_request_ping(serial: &mut SerialPort<rp2040_hal::usb::UsbBus>) {
-        print_debug_message!(b"      * processing request: PING");
+        print_debug_message!(b"\t* processing request: PING\r\n");
         let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
         Self::send_answer(serial, answer);
     }
 
@@ -171,7 +171,7 @@ impl DioRequestProcessor {
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
-        print_debug_message!(b"      * processing request: SET_PIN_DIRECTION");
+        print_debug_message!(b"      * processing request: SET_PIN_DIRECTION\r\n");
 
         match request.value {
             femtopb::EnumValue::Known(v) => match v {
@@ -194,7 +194,7 @@ impl DioRequestProcessor {
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
-        print_debug_message!(b"      * processing request: SET_PIN_VALUE");
+        print_debug_message!(b"      * processing request: SET_PIN_VALUE\r\n");
 
         match request.value {
             femtopb::EnumValue::Known(v) => match v {
@@ -217,7 +217,7 @@ impl DioRequestProcessor {
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
-        print_debug_message!(b"      * processing request: GET_PIN_DIRECTION");
+        print_debug_message!(b"      * processing request: GET_PIN_DIRECTION\r\n");
         let mut answer = PicohaDioAnswer::default();
         answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
         Self::send_answer(serial, answer);
@@ -228,7 +228,7 @@ impl DioRequestProcessor {
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
-        print_debug_message!(b"      * processing request: GET_PIN_VALUE");
+        print_debug_message!(b"      * processing request: GET_PIN_VALUE\r\n");
         let mut answer = PicohaDioAnswer::default();
         answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
         Self::send_answer(serial, answer);
@@ -241,8 +241,8 @@ impl DioRequestProcessor {
         let encoded_len = answer.encoded_len();
         answer.encode(&mut buffer.as_mut()).unwrap();
 
-        print_debug_message!("      * sending answer: {:?}", encoded_len);
-        print_debug_message!("      * sending answer: {:?}", &buffer[..encoded_len]);
+        // print_debug_message!("      * sending answer: {:?}", encoded_len);
+        // print_debug_message!("      * sending answer: {:?}", &buffer[..encoded_len]);
 
         // Prepare encoding
         let mut encoded_command = [0u8; 1024];
@@ -266,14 +266,14 @@ impl DioRequestProcessor {
             }
         };
 
-        print_debug_message!("      * sending answer 2: {:?}", totals.written);
+        // print_debug_message!("      * sending answer: {:?}", totals.written);
         print_debug_message!(
-            "      * sending answer 2: {:?}",
+            "      * sending answer: {:?}",
             &encoded_command[..totals.written]
         );
 
         match serial.write(&encoded_command[..totals.written]) {
-            Ok(_) => print_debug_message!(b"      * answer sent"),
+            Ok(_) => print_debug_message!(b"      * answer sent\r\n"),
             Err(e) => print_debug_message!("      * answer not sent {:?}", e),
         }
     }

@@ -20,7 +20,7 @@ harness = false   # allows Cucumber to print output instead of libtest
 tokio = { version = "1", features = ["full", "tracing"] }
 tokio-serial = "5.4.1"
 
-cucumber = "0.21.1"
+cucumber = { version = "0.21.1", features = ["tracing", "timestamps"] }
 futures = "0.3"
 
 prost-build = { version = "0.12" }
@@ -29,3 +29,5 @@ prost = "0.12"
 prost-types = "0.12"
 
 serial-line-ip = "0.5.0"
+tracing = "0.1.26"
+tracing-subscriber = "0.3.18"
