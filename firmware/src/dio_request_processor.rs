@@ -108,6 +108,7 @@ impl DioRequestProcessor {
     /// Set a pin low
     ///
     fn set_pin_low(&mut self, pin_num: u32) -> Result<(), &'static str> {
+        print_debug_message!("\t+pin {:?} low", pin_num);
         self.pins_o[pin_num as usize]
             .as_mut()
             .map(|pin| {
@@ -123,6 +124,7 @@ impl DioRequestProcessor {
     /// Set a pin high
     ///
     fn set_pin_high(&mut self, pin_num: u32) -> Result<(), &'static str> {
+        print_debug_message!("\t+pin {:?} high", pin_num);
         self.pins_o[pin_num as usize]
             .as_mut()
             .map(|pin| {

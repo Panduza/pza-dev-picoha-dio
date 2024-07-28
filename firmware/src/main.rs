@@ -6,7 +6,9 @@
 
 // uart debug
 mod uart_debug;
+use embedded_hal::digital::OutputPin;
 use rp2040_hal::gpio::DynPinId;
+use rp2040_hal::gpio::OutputDriveStrength;
 // use rp2040_hal::gpio::new_pin;
 #[cfg(any(feature = "uart0_debug"))]
 use uart_debug::uart_debug_init;
@@ -95,6 +97,22 @@ unsafe fn main() -> ! {
     );
 
     // --------------------------------------------------------------
+    // test leds
+
+    // Set GPIO2 as output high
+    // let mut out = pins.gpio3.into_push_pull_output();
+    // // out.set_drive_strength(OutputDriveStrength::TwelveMilliAmps);
+    // out.set_drive_strength(OutputDriveStrength::TwoMilliAmps);
+    // out.set_high().unwrap();
+
+    // // Set GPIO3 as output low
+    // let mut inn = pins.gpio2.into_push_pull_output();
+    // inn.set_drive_strength(OutputDriveStrength::TwoMilliAmps);
+    // inn.set_low().unwrap();
+    // pins.gpio3.into_pull_down_input();
+    // pins.gpio3.into_pull_down_disabled();
+
+    // --------------------------------------------------------------
     // Init uart debug
     // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
     #[cfg(any(feature = "uart0_debug"))]
@@ -134,7 +152,7 @@ unsafe fn main() -> ! {
         .build();
 
     // --------------------------------------------------------------
-    //
+
     let mut pins_id: [Option<DynPinId>; 30] = [
         None, // 0 debug uart
         None, // 1 debug uart
