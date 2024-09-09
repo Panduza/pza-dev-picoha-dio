@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """API to control Pico Host Adapter Dio"""
 
 import __future__
@@ -7,36 +8,11 @@ __date__    = "12 Aou 2024"
 
 # ================== Imports ===================
 import logging
-import re
 import serial
-from enum import Enum
+import sliplib as sl
+import api_dio_pb2 as dio
 
 # ================== Variables =================
-
-
-# ================== Enums =====================
-class RequestType(Enum):
-    PING = 0
-    SET_PIN_DIRECTION = 1
-    SET_PIN_VALUE = 2
-    GET_PIN_DIRECTION = 3
-    GET_PIN_VALUE = 4
-    def __str__(self):
-        return self.name
-
-class PinValue(Enum):
-    LOW = 0
-    HIGH = 1
-    INPUT = 2
-    OUTPUT = 3
-    def __str__(self):
-        return self.name
-
-class AnswerType(Enum):
-    SUCCESS = 0
-    FAILURE = 1
-    def __str__(self):
-        return self.name
 
 
 # ================== Class =====================
@@ -57,15 +33,15 @@ class PicoHostAdapterDio():
         except Exception as err:
             logging.error(f'{err.args[1]}')
 
-    def __picoha_dio_request(self,request_type:RequestType,pin_num:int=None,pin_value:PinValue=None) -> bool:
+    def __picoha_dio_request(self,request_type:dio.RequestType,pin_num:int=None,pin_value:dio.PinValue=None) -> bool:
         """Send commend by serial COM"""
+        picoha_dio_request = dio.PicohaDioRequest()
+        picoha_dio_request.type = request_type
+        picoha_dio_request.value = pin_value 
+        picoha_dio_request.pin_num = pin_num 
         try:
-            # Send/Write PicohaDioRequest in serial in binary 
-            self.__serialPort.write(b"message PicohaDioRequest {" +\
-                        f"RequestType type = {request_type}; " +\
-                        f"uint32 pin_num = {pin_num}; " +\
-                        f"PinValue value = {pin_value}; " +\
-                        "}\r\n")
+            # Send/Write PicohaDioRequest in serial in binary using slip
+            self.__serialPort.write(sl.encode(picoha_dio_request))
             logging.debug("Request: SUCCESS")
         except Exception as err:
             logging.error(f'Request: {err.args[1]}')
@@ -75,16 +51,18 @@ class PicoHostAdapterDio():
         try:
             while 1:
                 # Read data out of the buffer until a carraige return / new line is found
-                serialString = self.__serialPort.readline().decode("Ascii")
+                serialString = self.__serialPort.readline()
                 break
-            serialString = serialString.replace("optional ", "")
-            fields = re.findall(r'(\w+)\s(\w+)\s=\s(\d+);', serialString)
-            picoha_dio_answer = {field[1]: int(field[2]) for field in fields}
-            if picoha_dio_answer["type"] != AnswerType.SUCCESS.value :
+            picoha_dio_answer = dio.AnswerType()
+            picoha_dio_answer.ParseFromString(sl.decode(serialString))
+            logging.debug(picoha_dio_answer.ParseFromString(sl.decode(serialString)))
+            if picoha_dio_answer.type != dio.AnswerType.SUCCESS :
                 logging.warning("Answer: FAILURE")
             else:
                 logging.debug("Answer: SUCCESS")
             return picoha_dio_answer
+        except dio.ProtocolError :
+            logging.error(dio.ProtocolError)
         except Exception as err:
             logging.error(f'{err.args[1]}')
     
@@ -95,28 +73,28 @@ class PicoHostAdapterDio():
     def ping_info(self):
         '''Get ping info'''
         #TODO: sort and return the 'ping' value
-        self.__picoha_dio_request(RequestType.PING.value)
+        self.__picoha_dio_request(dio.RequestType.PING)
         return self.__picoha_dio_answer()
 
-    def set_pin_mode(self, pin:int, mode:PinValue) -> AnswerType:
+    def set_pin_mode(self, pin:int, mode:dio.PinValue) -> dio.AnswerType:
         '''Set mode of pin in INPUT/OUTPUT'''
-        self.__picoha_dio_request(RequestType.SET_PIN_DIRECTION.value,pin,mode)
-        return AnswerType(self.__picoha_dio_answer()['type'])
+        self.__picoha_dio_request(dio.RequestType.SET_PIN_DIRECTION,pin,mode)
+        return self.__picoha_dio_answer.type
 
-    def set_pin_value(self, pin:int, value:PinValue) -> AnswerType:
+    def set_pin_value(self, pin:int, value:dio.PinValue) -> dio.AnswerType:
         '''Set value of pin as HIGH/LOW'''
-        self.__picoha_dio_request(RequestType.SET_PIN_VALUE.value,pin,value)
-        return AnswerType(self.__picoha_dio_answer()['type'])
+        self.__picoha_dio_request(dio.RequestType.SET_PIN_VALUE,pin,value)
+        return self.__picoha_dio_answer.type
 
-    def get_pin_mode(self, pin:int) -> PinValue:
+    def get_pin_mode(self, pin:int) -> dio.PinValue:
         '''Get mode of pin in INPUT/OUTPUT'''
-        self.__picoha_dio_request(RequestType.GET_PIN_DIRECTION.value,pin) 
-        return PinValue(self.__picoha_dio_answer()['value'])
+        self.__picoha_dio_request(dio.RequestType.GET_PIN_DIRECTION,pin) 
+        return self.__picoha_dio_answer.value
 
-    def get_pin_value(self, pin:int) -> PinValue:
+    def get_pin_value(self, pin:int) -> dio.PinValue:
         '''Get value of pin as HIGH/LOW'''
-        self.__picoha_dio_request(RequestType.GET_PIN_VALUE.value,pin) 
-        return PinValue(self.__picoha_dio_answer()['value'])
+        self.__picoha_dio_request(dio.RequestType.GET_PIN_VALUE,pin) 
+        return self.__picoha_dio_answer.value
 
 
 # ================== Main ======================
