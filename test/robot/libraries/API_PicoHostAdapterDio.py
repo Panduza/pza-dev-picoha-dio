@@ -76,22 +76,22 @@ class PicoHostAdapterDio():
         self.__picoha_dio_request(dio.RequestType.PING)
         return self.__picoha_dio_answer()
 
-    def set_pin_mode(self, pin:int, mode:dio.PinValue) -> dio.AnswerType:
+    def set_gpio_mode(self, pin:int, mode:dio.PinValue) -> dio.AnswerType:
         '''Set mode of pin in INPUT/OUTPUT'''
         self.__picoha_dio_request(dio.RequestType.SET_PIN_DIRECTION,pin,mode)
         return self.__picoha_dio_answer.type
 
-    def set_pin_value(self, pin:int, value:dio.PinValue) -> dio.AnswerType:
+    def set_gpio_value(self, pin:int, value:dio.PinValue) -> dio.AnswerType:
         '''Set value of pin as HIGH/LOW'''
         self.__picoha_dio_request(dio.RequestType.SET_PIN_VALUE,pin,value)
         return self.__picoha_dio_answer.type
 
-    def get_pin_mode(self, pin:int) -> dio.PinValue:
+    def get_gpio_mode(self, pin:int) -> dio.PinValue:
         '''Get mode of pin in INPUT/OUTPUT'''
         self.__picoha_dio_request(dio.RequestType.GET_PIN_DIRECTION,pin) 
         return self.__picoha_dio_answer.value
 
-    def get_pin_value(self, pin:int) -> dio.PinValue:
+    def get_gpio_value(self, pin:int) -> dio.PinValue:
         '''Get value of pin as HIGH/LOW'''
         self.__picoha_dio_request(dio.RequestType.GET_PIN_VALUE,pin) 
         return self.__picoha_dio_answer.value
