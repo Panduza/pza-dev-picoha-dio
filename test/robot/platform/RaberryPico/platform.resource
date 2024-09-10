@@ -11,7 +11,7 @@ Library      gpio_keywords.py
 
 *** Variables ***
 # I will try with few pins
-${pin}=    2
+${Status_Last_CMD} =    SUCCESS
 
 *** Keywords ***
 
@@ -27,24 +27,47 @@ Main Test Platform Cleanup
 a system that is correctly initialized
     ${system_state}     is connected
     Should Be Equal     ${system_state}    true
+    ${ping}    ping
+    Should Be Equal     ${ping}    true
     Log                 "system is initialized"
+
+communication working
+    ${ping}    ping
+    Should Be Equal     ${ping}    true
    
 the system is asked to set ${pins_list} as "${mode}"
-    Log    "try set 2 in ${mode}"
-    set pin mode    ${pin}     ${mode}
+    FOR    ${pin}   IN  ${pins_list}
+        ${Status_Last_CMD}    set gpio mode    ${pin}     ${mode}   
+    END
 
-pins must be in "${mode}"
-    ${mode}    get pin mode    ${pin}
-    Log    "check 2 are in ${mode}"
+${pins_list} must be in "${mode}"
+    FOR    ${pin}   IN  ${pins_list}
+        ${moderead}    get gpio mode    ${pin}
+        Should Be Equal     ${mode}    ${moderead} 
+    END
 
-value is set to "${value}"
-    Log    "value is set to"
+${pins_list} value is set to "${value}"
+    FOR    ${pin}   IN  ${pins_list}
+        ${Status_Last_CMD}    set gpio value    ${pin}    ${value}
+    END
 
-output value must be at "${value}"
-    Log    "output value must be at"
+${pins_list} output value must be at "${value}"
+    FOR    ${pin}   IN  ${pins_list}
+        ${value_comp}   get gpio value comp     ${pin}
+        Should Be Equal     ${value}    ${value_comp}
+    END
 
-input value is "${value}"
-    Log    "input value is"
+${pins_list} input value is "${value}"
+    FOR    ${pin}   IN  ${pins_list}
+        ${Status_Last_CMD}    set gpio value comp    ${pin}    ${value}
+    END
 
-value read must be "${value}"
-    Log    "value read must be"
+${pins_list} value read must be "${value}"
+    FOR    ${pin}   IN  ${pins_list}
+        ${value_comp}   get gpio value  ${pin}
+        Should Be Equal     ${value}    ${value_comp}
+    END
+
+output error must be FAILURE
+    Should Be Equal    ${Status_Last_CMD}   FAILURE
+
