@@ -32,6 +32,11 @@ type PinI = rp2040_hal::gpio::Pin<
 >;
 const PINI_NONE: Option<PinI> = None;
 
+enum PinDirection {
+    input, output
+}
+
+
 /// Application Digital I/O
 pub struct DioRequestProcessor {
     pins_id: [Option<DynPinId>; MAX_PINS],
@@ -48,6 +53,21 @@ impl DioRequestProcessor {
             pins_o: [PINO_NONE; MAX_PINS],
             pins_i: [PINI_NONE; MAX_PINS],
         }
+    }
+
+    /// Check internal configuration to get the pin direction configuration
+    /// 
+    fn get_internal_pin_direction(&self, pin: usize) -> Option<PinDirection> {
+        // if pin is in the output array, it is configured as output
+        if self.pins_o[pin].is_some() {
+            return Some(PinDirection::output);
+        }
+        // if pin is in the input array, it is configured as input
+        if self.pins_i[pin].is_some() {
+            return Some(PinDirection::input);
+        }
+        // else not configured yet
+        None
     }
 
     /// Set a pin as output
@@ -240,7 +260,20 @@ impl DioRequestProcessor {
     ) {
         print_debug_message!(b"      * processing request: GET_PIN_DIRECTION\r\n");
         let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        
+        match self.get_internal_pin_direction(request.pin_num as usize) {
+            Some(direction) => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+                match direction {
+                    PinDirection::input => todo!(),
+                    PinDirection::output => todo!(),
+                }
+            },
+            None => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+            },
+        }
+
         Self::send_answer(serial, answer);
     }
 
