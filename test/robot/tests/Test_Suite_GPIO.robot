@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation       GPIO
 
-Resource            RaberryPico/platform.resource
+Resource            ../platform/RaspberryPico/platform.resource
 
 Test Setup          Main Test Platform Setup
 Test Teardown       Main Test Platform Cleanup

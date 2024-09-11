@@ -72,9 +72,8 @@ class PicoHostAdapterDio():
 
     def ping_info(self):
         '''Get ping info'''
-        #TODO: sort and return the 'ping' value
         self.__picoha_dio_request(dio.RequestType.PING)
-        return self.__picoha_dio_answer()
+        return self.__picoha_dio_answer().type
 
     def set_gpio_mode(self, pin:int, mode:dio.PinValue) -> dio.AnswerType:
         '''Set mode of pin in INPUT/OUTPUT'''

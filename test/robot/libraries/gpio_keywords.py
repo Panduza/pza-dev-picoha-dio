@@ -1,7 +1,13 @@
-from API_PicoHostAdapterDio import PicoHostAdapter
+#!/usr/bin/env python3
+"""This file link RobotFramework Keywords we python API"""
+import sys, os
 import logging
+
+# local imports
 import api_dio_pb2 as dio
-import ..platform.RaberryPico.platform_data
+from API_PicoHostAdapterDio import PicoHostAdapterDio
+#from ..platform.RaspberryPico import platform_data as platform
+
 # ================== Keys World ================
 
 def test_that_nothing_is_good_too():
@@ -12,13 +18,16 @@ def test_that_nothing_is_good_too():
 test = PicoHostAdapterDio("COM3")
 
 def is_connected():
-    if test.is_connected():
-        return "true"
-    else:
+    try:
+        return "true" if test.is_connected() else "false"
+    except:
         return "false"
     
 def ping():
-    test.ping_info()
+    try :
+        return "true" if (test.ping_info() == dio.AnswerType.SUCCESS) else "false"
+    except:
+        return "false"
 
 def set_gpio_mode(gpio:int, mode):
     '''set the gpio mode'''
@@ -71,20 +80,30 @@ def get_gpio_value(gpio:int):
 
 def get_comp_gpio(gpio:int):
     '''get paired GPIO'''
-    if gpio == 25 :
+    #if gpio not in platform.GPIO_USABLE:
+    #    logging.warning('This gpio is not usable.')
+    #    return "FAILURE"
+    if gpio==23 or gpio==24:
+        return "FAILURE"
+    elif gpio == 25 :
         logging.warning('GPIO 25 is builtin LED')
-        return -1
-    elif gpio not in GPIO_USABLE:
-        logging.warning('this gpio is not usable.')
-        return -1
+        return "FAILURE"
+    elif gpio==22:
+        return 26
+    elif gpio==26:
+        return 22
+    elif gpio==27: 
+        return 28
+    elif gpio==28: 
+        return 27
     else :
-        return gpio+1 if not gpio==24 else gpio+2
+        return gpio-1 if gpio % 2 else gpio+1
     
 def get_gpio_value_comp(gpio:int):
     return get_gpio_value(get_comp_gpio(gpio))
 
-def set_gpio_value_comp(gpio:int):
-    return set_gpio_value(get_comp_gpio(gpio))
+def set_gpio_value_comp(gpio:int, value):
+    return set_gpio_value(get_comp_gpio(gpio, value))
 
 # ================== Main ======================
 if __name__ == '__main__':
