@@ -194,7 +194,11 @@ unsafe fn main() -> ! {
     // let mut request_buffer = DioRequestBuffer::new();
     let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =
         serial_line_ip::DecoderBuffer::new();
+
+    // Create the request processor and init all pin to input
     let mut request_processor = DioRequestProcessor::new(pins_id);
+    request_processor.init_all_pins_as_input();
+
     loop {
         // Check for new data
         if usb_dev.poll(&mut [&mut serial]) {

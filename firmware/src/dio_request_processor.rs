@@ -55,6 +55,15 @@ impl DioRequestProcessor {
         }
     }
 
+    ///
+    /// Initialize all pins as input
+    /// 
+    pub fn init_all_pins_as_input(&mut self) {
+        for n in 0..30 {
+            self.set_pin_as_input(n);
+        }
+    }
+
     /// Check internal configuration to get the pin direction configuration
     /// 
     fn get_internal_pin_direction(&self, pin: usize) -> Option<PinDirection> {
@@ -253,20 +262,35 @@ impl DioRequestProcessor {
         Self::send_answer(serial, answer);
     }
 
+    ///
+    /// This function process an incoming request to get a pin direction
+    /// 
     fn process_request_get_pin_direction(
         &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
+        // Debug log
         print_debug_message!(b"      * processing request: GET_PIN_DIRECTION\r\n");
+
+        // Prepare a default answer
         let mut answer = PicohaDioAnswer::default();
         
+        // Fill the return message
+        // Success if the pin has a direction set
+        // Failure if the pin is not already configured
         match self.get_internal_pin_direction(request.pin_num as usize) {
             Some(direction) => {
                 answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
                 match direction {
-                    PinDirection::input => todo!(),
-                    PinDirection::output => todo!(),
+                    PinDirection::input => {
+                        print_debug_message!(b"      * input\r\n");
+                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
+                    }
+                    PinDirection::output =>  {
+                        print_debug_message!(b"      * output\r\n");
+                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
+                    }
                 }
             },
             None => {
@@ -274,8 +298,10 @@ impl DioRequestProcessor {
             },
         }
 
+        // Send back the message
         Self::send_answer(serial, answer);
     }
+
 
     fn process_request_get_pin_value(
         &mut self,
@@ -295,6 +321,7 @@ impl DioRequestProcessor {
         let encoded_len = answer.encoded_len();
         answer.encode(&mut buffer.as_mut()).unwrap();
 
+        print_debug_message!("      * answer: {:?}", answer);
         // print_debug_message!("      * sending answer: {:?}", encoded_len);
         // print_debug_message!("      * sending answer: {:?}", &buffer[..encoded_len]);
 

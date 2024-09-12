@@ -8,6 +8,8 @@ enum RequestType {
     GET_PIN_VALUE = 4;
 }
 
+// This structure should be splitted
+// 1 for values and 1 for directions
 enum PinValue {
     LOW = 0;
     HIGH = 1;
