@@ -67,15 +67,21 @@ impl DioRequestProcessor {
     /// Check internal configuration to get the pin direction configuration
     /// 
     fn get_internal_pin_direction(&self, pin: usize) -> Option<PinDirection> {
+        // Debug
+        // print_debug_message!("? check pin {:?}\r\n", pin);
+
         // if pin is in the output array, it is configured as output
         if self.pins_o[pin].is_some() {
             return Some(PinDirection::output);
         }
+
         // if pin is in the input array, it is configured as input
         if self.pins_i[pin].is_some() {
             return Some(PinDirection::input);
         }
+
         // else not configured yet
+        // print_debug_message!(b"? not configured\r\n");
         None
     }
 
