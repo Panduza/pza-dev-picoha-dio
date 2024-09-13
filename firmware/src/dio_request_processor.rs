@@ -8,7 +8,7 @@ use crate::{
 };
 use core::fmt::Write;
 
-use embedded_hal::digital::OutputPin;
+use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
 use rp2040_hal::gpio::new_pin;
 // Message deserialization support
 use femtopb::Message;
@@ -35,7 +35,9 @@ const PINI_NONE: Option<PinI> = None;
 enum PinDirection {
     input, output
 }
-
+enum PinValue {
+    low, high
+}
 
 /// Application Digital I/O
 pub struct DioRequestProcessor {
@@ -78,6 +80,43 @@ impl DioRequestProcessor {
         // if pin is in the input array, it is configured as input
         if self.pins_i[pin].is_some() {
             return Some(PinDirection::input);
+        }
+
+        // else not configured yet
+        // print_debug_message!(b"? not configured\r\n");
+        None
+    }
+
+
+    /// Check internal configuration to get the pin direction configuration
+    /// 
+    fn get_internal_pin_value(&self, pin: usize) -> Option<PinValue> {
+        // Debug
+        // print_debug_message!("? check pin {:?}\r\n", pin);
+
+        
+        let dir = self.get_internal_pin_direction(pin);
+        match dir {
+            Some(d) => {
+                match d {
+                    PinDirection::input => {
+                        let pin_obj = &self.pins_i[pin];
+                        if let Some(pin_obj) = pin_obj {
+                            // pin_obj.is_high()
+                        }
+                    },
+                    PinDirection::output => {
+                        let pin_obj = &self.pins_o[pin];
+                        if let Some(pin_obj) = pin_obj {
+                            // if pin_obj.is_set_high() {
+                            //     Some(PinValue::high)
+                            // }
+                            
+                        }
+                    }
+                }
+            }
+            None => todo!(),
         }
 
         // else not configured yet
