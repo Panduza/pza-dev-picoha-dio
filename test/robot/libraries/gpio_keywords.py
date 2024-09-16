@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """This file link RobotFramework Keywords we python API"""
-import sys, os
 import logging
 
 # local imports
@@ -15,7 +14,7 @@ def test_that_nothing_is_good_too():
     print("You should be able to see this inside your test report.")
 
 # ==============================================
-test = PicoHostAdapterDio("COM3")
+test = PicoHostAdapterDio("COM4")
 
 def is_connected():
     try:
@@ -29,15 +28,19 @@ def ping():
     except:
         return "false"
 
-def set_gpio_mode(gpio:int, mode):
-    '''set the gpio mode'''
+def set_gpio_mode(gpio:int, mode:dio.PinValue):
+    '''set gpio mode AND complementary gpio mode according to shematics'''
     comp_gpio = get_comp_gpio(gpio)
-    if mode.uper() == 'INPUT':
+    logging.debug(f'{gpio} is connected to {comp_gpio}')
+    if mode == dio.PinValue.INPUT:
         err1 = test.set_gpio_mode(gpio, dio.PinValue.INPUT)
         err2 = test.set_gpio_mode(comp_gpio, dio.PinValue.OUTPUT)
-    else:
+    elif mode == dio.PinValue.OUTPUT:
         err1 = test.set_gpio_mode(gpio, dio.PinValue.OUTPUT)
         err2 = test.set_gpio_mode(comp_gpio, dio.PinValue.INPUT)
+    else:
+        logging.debug("This is not a direction value")
+        err1,err2 = dio.AnswerType.FAILURE
     if err1 == dio.AnswerType.SUCCESS and err2 == dio.AnswerType.SUCCESS:
         logging.debug("SUCCESS")
         return ("SUCCESS")
@@ -103,7 +106,7 @@ def get_gpio_value_comp(gpio:int):
     return get_gpio_value(get_comp_gpio(gpio))
 
 def set_gpio_value_comp(gpio:int, value):
-    return set_gpio_value(get_comp_gpio(gpio, value))
+    return set_gpio_value(get_comp_gpio(gpio), value)
 
 # ================== Main ======================
 if __name__ == '__main__':
