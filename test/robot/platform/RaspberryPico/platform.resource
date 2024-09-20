@@ -10,15 +10,13 @@ Variables    platform_data.py
 Library      ../../libraries/gpio_keywords.py
 
 *** Variables ***
-# I will try with few pins
-${Status_Last_CMD} =    SUCCESS
+${Status_Last_CMD} =    None
 
 *** Keywords ***
 
 Main Test Platform Setup
     Set Log Level    DEBUG
     Log     "RaspberryPico Setup"
-    a system that is correctly initialized
 
 Main Test Platform Cleanup
     Log     "RaspberryPico Cleanup"
@@ -36,44 +34,45 @@ communication working
     ${ping}    ping
     Should Be Equal     ${ping}    true
    
-the system is asked to set @{pins_list} as "${mode}"
-    FOR    ${pin}   IN    @{pins_list}
-        ${Status_Last_CMD}    set gpio mode    ${pin}     ${mode}   
+the system is asked to set @{GPIOs_list} as "${direction}"
+    FOR    ${gpio}   IN    @{GPIOs_list}
+        ${Status_Last_CMD}    set gpio direction and his comp    ${gpio}     ${direction}   
     END
 
-@{pins_list} must be in "${mode}"
-    FOR    ${pin}   IN  @{pins_list}
-        ${moderead}    get gpio mode    ${pin}
-        Should Be Equal     ${mode}    ${moderead} 
+@{GPIOs_list} must be in "${direction}"
+    FOR    ${gpio}   IN  @{GPIOs_list}
+        ${directionread}    get gpio direction    ${gpio}
+        Should Be Equal     ${direction}    ${directionread} 
     END
 
-@{pins_list} value is set to "${value}"
-    FOR    ${pin}   IN  @{pins_list}
-        ${Status_Last_CMD}    set gpio value    ${pin}    ${value}
+@{GPIOs_list} value is set to "${value}"
+    FOR    ${gpio}   IN  @{GPIOs_list}
+        ${Status_Last_CMD}    set gpio value    ${gpio}    ${value}
     END
 
-@{pins_list} output value must be at "${value}"
-    FOR    ${pin}   IN  @{pins_list}
-        ${value_comp}   get gpio value comp     ${pin}
+@{GPIOs_list} output value must be at "${value}"
+    FOR    ${gpio}   IN  @{GPIOs_list}
+        ${value_comp}   get gpio value comp     ${gpio}
         Should Be Equal     ${value}    ${value_comp}
     END
 
-@{pins_list} input value is "${value}"
-    FOR    ${pin}   IN  @{pins_list}
-        Log "${pin} tested: comp set to ${value}"
-        ${Status_Last_CMD}    set gpio value comp    ${pin}    ${value}
+@{GPIOs_list} input value is "${value}"
+    FOR    ${gpio}   IN  @{GPIOs_list}
+        Log    "${gpio} tested: comp set to ${value}"
+        ${Status_Last_CMD}    set gpio value comp    ${gpio}    ${value}
     END
 
-@{pins_list} value read must be "${value}"
-    FOR    ${pin}   IN  @{pins_list}
-        ${value_comp}   get gpio value  ${pin}
-        Log "${pin} tested: comp set to ${value}"
+@{GPIOs_list} value read must be "${value}"
+    FOR    ${gpio}   IN  @{GPIOs_list}
+        ${value_comp}   get gpio value  ${gpio}
+        Log    "${gpio} tested: comp set to ${value}"
         Should Be Equal     ${value}    ${value_comp}
     END
 
-the system is asked to set a not existing pin
-    ${Status_Last_CMD}    set gpio mode    50     ${mode} 
+the system is asked to set a not existing gpio
+    ${Status_Last_CMD}    set gpio direction    50     OUTPUT 
 
 output error must be FAILURE
+    [Arguments]    ${Status_Last_CMD}
     Should Be Equal    ${Status_Last_CMD}   FAILURE
 
