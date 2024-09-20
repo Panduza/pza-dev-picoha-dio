@@ -10,8 +10,10 @@ __date__    = "12 Aou 2024"
 import logging
 import serial, os
 import sliplib as sl
+from google.protobuf.json_format import MessageToDict
+
+# local imports
 import api_dio_pb2 as dio
-from google.protobuf.json_format import MessageToJson, MessageToDict
 
 # ================== Variables =================
 
@@ -79,13 +81,18 @@ class PicoHostAdapterDio():
     def __picoha_dio_answer(self):
         """Wait answer on serial COM"""
         try:
-            while 1:
-                # Read data out of the buffer until a carraige return / new line is found
-                serialString = self.__serialPort.read(100)
-                break 
+            # Read data out of the buffer until a carraige return / new line is found
+            serialString = self.__serialPort.read(100)
             picoha_dio_answer = dio.PicohaDioAnswer()
+            if len(serialString) == 0 :
+                logging.error('Timeout Data')
+                picoha_dio_answer.type = dio.AnswerType.FAILURE
+                return picoha_dio_answer
             picoha_dio_answer.ParseFromString(sl.decode(serialString))
-            logging.debug(MessageToDict(picoha_dio_answer))
+            if picoha_dio_answer.type == dio.AnswerType.SUCCESS :
+                logging.debug(MessageToDict(picoha_dio_answer))
+            else:
+                logging.warning(MessageToDict(picoha_dio_answer))
             return picoha_dio_answer
         except Exception as err:
             logging.error(err)
@@ -99,30 +106,30 @@ class PicoHostAdapterDio():
         self.__picoha_dio_request(dio.RequestType.PING)
         return self.__picoha_dio_answer().value
 
-    def set_gpio_mode(self, pin:int, mode:dio.PinValue) -> dio.AnswerType:
-        '''Set mode of pin in INPUT/OUTPUT'''
-        self.__picoha_dio_request(dio.RequestType.SET_PIN_DIRECTION, pin, mode)
+    def set_gpio_direction(self, gpio:int, direction:dio.PinValue) -> int:
+        '''Set direction of pin in INPUT/OUTPUT'''
+        self.__picoha_dio_request(dio.RequestType.SET_PIN_DIRECTION, gpio, direction)
         return self.__picoha_dio_answer().type
 
-    def set_gpio_value(self, pin:int, value:dio.PinValue) -> dio.AnswerType:
-        '''Set value of pin as HIGH/LOW'''
-        self.__picoha_dio_request(dio.RequestType.SET_PIN_VALUE,pin,value)
+    def set_gpio_value(self, gpio:int, value:dio.PinValue) -> int:
+        '''Set value of gpio as HIGH/LOW'''
+        self.__picoha_dio_request(dio.RequestType.SET_PIN_VALUE, gpio, value)
         return self.__picoha_dio_answer().type
 
-    def get_gpio_mode(self, pin:int) -> dio.PinValue:
-        '''Get mode of pin in INPUT/OUTPUT'''
-        self.__picoha_dio_request(dio.RequestType.GET_PIN_DIRECTION,pin) 
+    def get_gpio_direction(self, gpio:int) -> int:
+        '''Get direction of gpio in INPUT/OUTPUT'''
+        self.__picoha_dio_request(dio.RequestType.GET_PIN_DIRECTION, gpio) 
         return self.__picoha_dio_answer().value
 
-    def get_gpio_value(self, pin:int) -> dio.PinValue:
-        '''Get value of pin as HIGH/LOW'''
-        self.__picoha_dio_request(dio.RequestType.GET_PIN_VALUE,pin) 
+    def get_gpio_value(self, gpio:int) -> int:
+        '''Get value of gpio as HIGH/LOW'''
+        self.__picoha_dio_request(dio.RequestType.GET_PIN_VALUE, gpio) 
         return self.__picoha_dio_answer().value
 
 
 # ================== Main ======================
 if __name__ == '__main__':
-  
+
     help(PicoHostAdapterDio)
     '''
     ## Exemple:
@@ -133,17 +140,17 @@ if __name__ == '__main__':
     test = PicoHostAdapterDio("COM4")
     test.ping_info()
 
-    test.set_gpio_mode(pin=2,mode=dio.PinValue.OUTPUT)
-    test.get_gpio_mode(pin=2)
+    test.set_gpio_direction(gpio=2,direction=dio.PinValue.OUTPUT)
+    test.get_gpio_direction(gpio=2)
 
-    test.set_gpio_mode(pin=3,mode=dio.PinValue.INPUT)
-    test.get_gpio_mode(pin=3)
+    test.set_gpio_direction(gpio=3,direction=dio.PinValue.INPUT)
+    test.get_gpio_direction(gpio=3)
 
     # Main
     for i in range(0,4,1):
         print()
         time.sleep(0.5)
-        test.set_gpio_value(pin=2,value=1-i%2)
+        test.set_gpio_value(gpio=2,value=1-i%2)
         time.sleep(0.5)
-        test.get_gpio_value(pin=3)
+        test.get_gpio_value(gpio=3)
     '''
