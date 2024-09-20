@@ -36,7 +36,7 @@ communication working
    
 the system is asked to set @{GPIOs_list} as "${direction}"
     FOR    ${gpio}   IN    @{GPIOs_list}
-        ${Status_Last_CMD}    set gpio direction and his comp    ${gpio}     ${direction}   
+        ${Status}    set gpio direction and his comp    ${gpio}     ${direction}   
     END
 
 @{GPIOs_list} must be in "${direction}"
@@ -47,7 +47,7 @@ the system is asked to set @{GPIOs_list} as "${direction}"
 
 @{GPIOs_list} value is set to "${value}"
     FOR    ${gpio}   IN  @{GPIOs_list}
-        ${Status_Last_CMD}    set gpio value    ${gpio}    ${value}
+        ${Status}    set gpio value    ${gpio}    ${value}
     END
 
 @{GPIOs_list} output value must be at "${value}"
@@ -58,21 +58,21 @@ the system is asked to set @{GPIOs_list} as "${direction}"
 
 @{GPIOs_list} input value is "${value}"
     FOR    ${gpio}   IN  @{GPIOs_list}
-        Log    "${gpio} tested: comp set to ${value}"
-        ${Status_Last_CMD}    set gpio value comp    ${gpio}    ${value}
+        Log    "${gpio} under test: comp set to ${value}"
+        ${Status}    set gpio value comp    ${gpio}    ${value}
     END
 
 @{GPIOs_list} value read must be "${value}"
     FOR    ${gpio}   IN  @{GPIOs_list}
         ${value_comp}   get gpio value  ${gpio}
-        Log    "${gpio} tested: comp set to ${value}"
+        Log    "${gpio} under test: comp set to ${value}"
         Should Be Equal     ${value}    ${value_comp}
     END
 
 the system is asked to set a not existing gpio
-    ${Status_Last_CMD}    set gpio direction    50     OUTPUT 
+    ${Status}    set gpio direction    50     OUTPUT 
+    Set Global Variable     ${Status_Last_CMD}    ${Status} 
 
 output error must be FAILURE
-    [Arguments]    ${Status_Last_CMD}
     Should Be Equal    ${Status_Last_CMD}   FAILURE
 
