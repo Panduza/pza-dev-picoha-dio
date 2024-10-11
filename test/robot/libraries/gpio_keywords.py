@@ -28,11 +28,16 @@ def connect_to(COM: str = "COM4"):
     except SyntaxError as err:
         raise SyntaxError(f"{err}")
     except:
-        raise Exception(f"Imposible de create object PicoHost Adapter Dio on {COM}")
+        raise Exception(f"Imposible to create object PicoHost Adapter Dio on {COM}")
 
 
 def disconnect():
-    test.__del__()
+    try:
+        test.__del__()
+    except SyntaxError as err:
+        raise SyntaxError(f"{err}")
+    except:
+        raise Exception(f"Imposible to delete object PicoHost Adapter Dio")
 
 
 def is_connected():
@@ -45,7 +50,11 @@ def is_connected():
 def ping():
     """send Ping frame"""
     try:
-        return "true" if (test.ping_info() == dio.AnswerType.SUCCESS) else "false"
+        if test.ping_info() == dio.AnswerType.SUCCESS:
+            return "true"
+        else:
+            logging.warning(f"PING failed")
+            return "false"
     except:
         raise Exception("Fail to communicate with the product.")
 
@@ -58,8 +67,11 @@ def set_gpio_direction(gpio: int, direction: dio.PinValue):
         err = test.set_gpio_direction(gpio, dio.PinValue.OUTPUT)
     else:
         raise ValueError(f"This is not Direction value : {direction}")
-
-    return "SUCCESS" if err == dio.AnswerType.SUCCESS else "FAILURE"
+    if err == dio.AnswerType.SUCCESS:
+        return "SUCCESS"
+    else:
+        logging.warning(f"FAIL to set gpio direction")
+        return "FAILURE"
 
 
 def get_gpio_direction(gpio: int):
@@ -70,7 +82,7 @@ def get_gpio_direction(gpio: int):
     elif direction == dio.PinValue.OUTPUT:
         return "OUTPUT"
     else:
-        raise ValueError(f"FAIL to get GPIO '{gpio}'direction.")
+        raise ValueError(f"FAIL to get GPIO{gpio} direction.")
 
 
 def set_gpio_value(gpio: int, value):
@@ -78,6 +90,7 @@ def set_gpio_value(gpio: int, value):
     if test.set_gpio_value(gpio, value) == dio.AnswerType.SUCCESS:
         return "SUCCESS"
     else:
+        logging.warning(f"FAIL to set gpio value")
         return "FAILURE"
 
 
@@ -89,7 +102,7 @@ def get_gpio_value(gpio: int):
     elif value == dio.PinValue.HIGH:
         return "HIGH"
     else:
-        raise ValueError(f"FAIL to get GPIO '{gpio}' value")
+        raise ValueError(f"FAIL to get GPIO{gpio} value")
 
 
 def check_gpio_direction(gpio: int, direction: str):
