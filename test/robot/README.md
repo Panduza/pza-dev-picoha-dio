@@ -73,13 +73,18 @@ By the way, if your are not using python on some other project... Go see https:/
 
 ### Prerequisites
 
-In order to use this systeme you shall install few tools : [PROTOBUF](https://protobuf.dev/) and [SLIP](https://sliplib.readthedocs.io/en/develop/module.html#module-sliplib.slip).
-You can install their using ```python install -e requierement.txt```. 
+In order to use this systeme you shall install few module python : [PROTOBUF](https://protobuf.dev/) and [SLIP](https://sliplib.readthedocs.io/en/develop/module.html#module-sliplib.slip).
+You can install their using : 
 
-You shall use the same PROTOBUF version as ```api_dio_pb2.py``` file. 
+```python install -r requierement.txt```.
+
+You shall use the same PROTOBUF version as [api_dio_pb2.py](./libraries/api_dio_pb2.py) file. Thie file was previously genereted from [api_dio.proto](../../firmware/src/api_dio.proto).
+
 Here ```Protobuf Python Version: 5.28.0```
 
-## Bench
+### Bench
+
+You will need an Raspberry Pico with Panduza Firmware flashed.
 
 To simplified testing we connecte GPIOs by pair, link so:
 
@@ -88,3 +93,15 @@ To simplified testing we connecte GPIOs by pair, link so:
  - GPIO 0 and 1 a reserved for debbug
  - GPIO 2 with GPIO 3, 4 with 5 and so one
  - there is one exeption: GPIO 25 is buildin LED 
+
+## Run campaine test
+
+Use a ['Robot Framework Test Suite'](./tests/) to run a test campaine with robot. If you used [requierement.txt](requirements.txt), Robot is already insalled.
+
+Exemple :
+```
+cd ./tests
+robot Test_Suite_GPIO.robot
+```
+
+Note: Check communication port number on your device management and put it on [platform.resource](./platform/RaspberryPico/platform.resource)

@@ -1,4 +1,4 @@
 pyserial
 sliplib
-protobuf>=5.28.0
+protobuf==5.28.0
 robotframework
