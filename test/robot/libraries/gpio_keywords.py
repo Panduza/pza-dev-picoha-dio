@@ -5,7 +5,8 @@ import logging
 # local imports
 import api_dio_pb2 as dio
 from API_PicoHostAdapterDio import PicoHostAdapterDio
-#from ..platform.RaspberryPico import platform_data as platform
+# FIXME : solve this import issue  
+#from ..platform.RaspberryPico import platform_data
 
 # ================== Keys World ================
 
@@ -14,20 +15,33 @@ def test_that_nothing_is_good_too():
     print("You should be able to see this inside your test report.")
 
 # ==============================================
-test = PicoHostAdapterDio("COM4")
+test = None
+
+def connect_to(COM:str="COM4"):
+    global test
+    try:
+        if test: test.__del__()
+        test = PicoHostAdapterDio(COM)
+    except SyntaxError as err:
+        raise SyntaxError(f'{err}')
+    except :
+        raise Exception(f'Imposible de create object PicoHost Adapter Dio on {COM}')
+    
+def disconnect():
+    test.__del__()
 
 def is_connected():
     try:
         return "true" if test.is_connected() else "false"
     except:
-        return "false"
+        raise Exception('Fail to connect product.')
     
 def ping():
     '''send Ping frame'''
     try :
         return "true" if (test.ping_info() == dio.AnswerType.SUCCESS) else "false"
     except:
-        return "false"
+        raise Exception('Fail to communicate with the product.')
 
 def set_gpio_direction(gpio:int, direction:dio.PinValue):
     '''set gpio direction'''
@@ -36,8 +50,7 @@ def set_gpio_direction(gpio:int, direction:dio.PinValue):
     elif direction == 'OUTPUT':
         err = test.set_gpio_direction(gpio, dio.PinValue.OUTPUT)
     else:
-        logging.warning(f"This is not Direction value : {direction}")
-        err = dio.AnswerType.FAILURE
+        raise ValueError(f"This is not Direction value : {direction}")
     
     return "SUCCESS" if err == dio.AnswerType.SUCCESS else "FAILURE"
 
@@ -49,8 +62,7 @@ def get_gpio_direction(gpio:int):
     elif direction == dio.PinValue.OUTPUT:
         return 'OUTPUT'
     else :
-        logging.warning(f"This is not Direction value : {direction}")
-        return None
+        raise ValueError(f"'{direction}' is not Direction value.")
 
 def set_gpio_value(gpio:int, value):
     '''set the gpio direction'''
@@ -67,51 +79,21 @@ def get_gpio_value(gpio:int):
     elif value == dio.PinValue.HIGH:
         return 'HIGH'
     else :
-        logging.warning("this is not value")
-        return None
-
-# ==============================================
-
-def get_comp_gpio(gpio:int):
-    '''get paired GPIO'''
-    #if gpio not in platform.GPIO_USABLE:
-    #    logging.warning('This gpio is not usable.')
-    #    return "FAILURE"
-    if gpio==23 or gpio==24:
-        return "FAILURE"
-    elif gpio == 25 :
-        logging.warning('GPIO 25 is builtin LED')
-        return "FAILURE"
-    elif gpio==22: return 26
-    elif gpio==26: return 22
-    elif gpio==27: return 28
-    elif gpio==28: return 27
-    else :
-        return gpio-1 if gpio % 2 else gpio+1
-     
-def set_gpio_direction_and_his_comp(gpio:int, direction:dio.PinValue):
-    '''set gpio direction AND complementary gpio direction according to shematics'''
-    comp_gpio = get_comp_gpio(gpio)
-    logging.debug(f'{gpio} is connected to {comp_gpio}')
-    if direction == 'INPUT':
-        err1 = test.set_gpio_direction(gpio, dio.PinValue.INPUT)
-        err2 = test.set_gpio_direction(comp_gpio, dio.PinValue.OUTPUT)
-    elif direction == 'OUTPUT':
-        err1 = test.set_gpio_direction(gpio, dio.PinValue.OUTPUT)
-        err2 = test.set_gpio_direction(comp_gpio, dio.PinValue.INPUT)
-    else:
-        logging.warning(f"This is not Direction value : {direction}")
-        err1,err2 = dio.AnswerType.FAILURE
-    if err1 == dio.AnswerType.SUCCESS and err2 == dio.AnswerType.SUCCESS:
-        return ("SUCCESS")
-    else :
-        return ("FAILURE")
+        raise ValueError(f"This is not value:{value} was found")
     
-def get_gpio_value_comp(gpio:int):
-    return get_gpio_value(get_comp_gpio(gpio))
+def check_gpio_direction(gpio:int,direction:str):
+    '''Verified for a given GPIO than its direction is set.'''
+    if not get_gpio_direction(gpio) == direction :
+        raise ValueError(f"GPIO '{gpio}' is not set as {direction}")
+    else:
+        return True
 
-def set_gpio_value_comp(gpio:int, value):
-    return set_gpio_value(get_comp_gpio(gpio), value)
+def check_gpio_value(gpio:int, value):
+    '''Verified for a given GPIO than its value is set by reading the input on its paired GPIO'''
+    if not get_gpio_value(gpio) == value :
+        raise ValueError(f"GPIO '{gpio} is not set as {value}")
+    else:
+        return True
 
 # ================== Main ======================
 if __name__ == '__main__':
