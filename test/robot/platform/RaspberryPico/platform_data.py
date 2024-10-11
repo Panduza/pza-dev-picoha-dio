@@ -27,30 +27,59 @@ To simplified the validation process
             └───────┴┴┴──────┘
 
 """
+
 import logging
 
-BUILTIN_LED =   25
-GPIO_UART   =   [0,1]
-GPIO_USABLE =   [ 2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13,
-                 14, 15, 16, 17, 18, 19, 20, 21, 22, 26, 27, 28]
+BUILTIN_LED = 25
+GPIO_UART = [0, 1]
+GPIO_USABLE = [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    26,
+    27,
+    28,
+]
 
-def get_comp_gpio(gpio:int):
-    '''get paired GPIO'''
-    #if gpio not in platform.GPIO_USABLE:
-    #    logging.warning('This gpio is not usable.')
-    #    return "FAILURE"
-    if gpio==23 or gpio==24:
+
+def get_comp_gpio(gpio: int):
+    """get paired GPIO"""
+    if gpio not in GPIO_USABLE:
+        logging.warning("This gpio is not usable on this Setup.")
         return "FAILURE"
-    elif gpio == 25 :
-        logging.warning('GPIO 25 is builtin LED')
+    elif gpio == 25:
+        logging.warning("GPIO 25 is builtin LED")
         return "FAILURE"
-    elif gpio==22: return 26
-    elif gpio==26: return 22
-    elif gpio==27: return 28
-    elif gpio==28: return 27
-    else :
-        return gpio-1 if gpio % 2 else gpio+1
+    elif gpio == 22:
+        return 26
+    elif gpio == 26:
+        return 22
+    elif gpio == 27:
+        return 28
+    elif gpio == 28:
+        return 27
+    else:
+        return gpio - 1 if gpio % 2 else gpio + 1
+
 
 # ================== Main ======================
-if __name__ == '__main__':
+if __name__ == "__main__":
     help(__name__)
