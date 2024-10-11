@@ -31,10 +31,10 @@ Check than GPIO in INPUT read correct value
     Given a system that is correctly initialized
     When the system is asked to set @{GPIOs_list} as "INPUT"
 
-    When @{GPIOs_list} input value is "LOW"
+    When @{GPIOs_list} input value is set to "LOW"
     Then @{GPIOs_list} value read must be "LOW"
 
-    When @{GPIOs_list} input value is "HIGH"
+    When @{GPIOs_list} input value is set to "HIGH"
     Then @{GPIOs_list} value read must be "HIGH"
 
 Check system still working after FAILURE
@@ -50,5 +50,5 @@ Check FAILURE output when using wrong GPIO
     Then output error must be FAILURE
 
 *** Variables ***
-@{GPIOs_list}    2    4    6    8    10    12    14    16    18    20    22
+@{GPIOs_list}    2    4    6    8    10    12    14    16    18    20    22    27
 
