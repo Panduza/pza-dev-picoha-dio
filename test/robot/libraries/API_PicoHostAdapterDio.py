@@ -100,7 +100,7 @@ class PicoHostAdapterDio:
             serialString = self.__serialPort.read(100)
             picoha_dio_answer = dio.PicohaDioAnswer()
             if len(serialString) == 0:
-                logging.error("Timeout Data")
+                logging.warning("Timeout: no Data received")
                 picoha_dio_answer.type = dio.AnswerType.FAILURE
                 return picoha_dio_answer
             picoha_dio_answer.ParseFromString(sl.decode(serialString))
@@ -119,7 +119,7 @@ class PicoHostAdapterDio:
     def ping_info(self):
         """Get ping info"""
         self.__picoha_dio_request(dio.RequestType.PING)
-        return self.__picoha_dio_answer().value
+        return self.__picoha_dio_answer().type
 
     def set_gpio_direction(self, gpio: int, direction: dio.PinValue) -> int:
         """Set direction of pin in INPUT/OUTPUT"""

@@ -20,6 +20,7 @@ test = None
 
 
 def connect_to(COM: str = "COM4"):
+    """Connect on Serial Port: COM"""
     global test
     try:
         if test:
@@ -32,6 +33,7 @@ def connect_to(COM: str = "COM4"):
 
 
 def disconnect():
+    """Closed Serial Port connection"""
     try:
         test.__del__()
     except SyntaxError as err:
@@ -41,6 +43,7 @@ def disconnect():
 
 
 def is_connected():
+    """Check connection on Serial Port"""
     try:
         return "true" if test.is_connected() else "false"
     except:
@@ -48,19 +51,14 @@ def is_connected():
 
 
 def ping():
-    """send Ping frame"""
-    try:
-        if test.ping_info() == dio.AnswerType.SUCCESS:
-            return "true"
-        else:
-            logging.warning(f"PING failed")
-            return "false"
-    except:
-        raise Exception("Fail to communicate with the product.")
+    """Send Ping frame"""
+    ping_info = test.ping_info()
+    if ping_info != dio.AnswerType.SUCCESS:
+        raise ValueError("Not able to get a PING answer.")
 
 
 def set_gpio_direction(gpio: int, direction: dio.PinValue):
-    """set gpio direction"""
+    """Set GPIO direction"""
     if direction == "INPUT":
         err = test.set_gpio_direction(gpio, dio.PinValue.INPUT)
     elif direction == "OUTPUT":
@@ -75,7 +73,7 @@ def set_gpio_direction(gpio: int, direction: dio.PinValue):
 
 
 def get_gpio_direction(gpio: int):
-    """return the gpio direction"""
+    """Return the GPIO direction"""
     direction = test.get_gpio_direction(gpio)
     if direction == dio.PinValue.INPUT:
         return "INPUT"
@@ -86,7 +84,7 @@ def get_gpio_direction(gpio: int):
 
 
 def set_gpio_value(gpio: int, value):
-    """set the gpio direction"""
+    """Set GPIO direction"""
     if test.set_gpio_value(gpio, value) == dio.AnswerType.SUCCESS:
         return "SUCCESS"
     else:
@@ -95,7 +93,7 @@ def set_gpio_value(gpio: int, value):
 
 
 def get_gpio_value(gpio: int):
-    """return the gpio direction"""
+    """Return GPIO direction"""
     value = test.get_gpio_value(gpio)
     if value == dio.PinValue.LOW:
         return "LOW"
