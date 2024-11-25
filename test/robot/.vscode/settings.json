@@ -1,0 +1,10 @@
+{
+    "robot.pythonpath": [
+        "${workspaceFolder}/libraries",
+        "${workspaceFolder}/platform/RaberryPico"
+    ],
+    "robotcode.robot.pythonPath": [
+        "${workspaceFolder}/libraries",
+        "${workspaceFolder}/platform/RaberryPico"
+    ]
+}
