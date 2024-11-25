@@ -29,6 +29,7 @@ mod api_dio;
 // Used to demonstrate writing formatted strings
 #[cfg(any(feature = "uart0_debug"))]
 use core::fmt::Write;
+use core::str;
 
 #[cfg(any(feature = "uart0_debug"))]
 use fugit::RateExtU32;
@@ -62,6 +63,27 @@ use rp_pico::hal::gpio::{FunctionPio0, Pin};
 
 use serial_line_ip;
 
+fn format_id(id: &[u8], buf: &mut [u8]) -> usize {
+    let mut i = 0;
+    for byte in id {
+        let high_nibble = (byte >> 4) & 0xF;
+        let low_nibble = byte & 0xF;
+        buf[i] = if high_nibble < 10 {
+            b'0' + high_nibble as u8
+        } else {
+            b'a' + (high_nibble - 10) as u8
+        };
+        i += 1;
+        buf[i] = if low_nibble < 10 {
+            b'0' + low_nibble as u8
+        } else {
+            b'a' + (low_nibble - 10) as u8
+        };
+        i += 1;
+    }
+    i
+}
+
 #[entry]
 unsafe fn main() -> ! {
     // info!("Program start");
@@ -86,6 +108,28 @@ unsafe fn main() -> ! {
 
     // let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     // let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+
+    let use_boot2 = true;
+    let jedec_id = rp2040_flash::flash::flash_jedec_id(use_boot2);
+
+    //
+    let mut id_unique: [u8; 8] = [0; 8];
+    rp2040_flash::flash::flash_unique_id(&mut id_unique, use_boot2);
+
+    let mut buf_display: [u8; 100] = [0; 100];
+    buf_display[0] = 'P' as u8;
+    buf_display[1] = 'I' as u8;
+    buf_display[2] = 'C' as u8;
+    buf_display[3] = 'O' as u8;
+    buf_display[4] = 'H' as u8;
+    buf_display[5] = 'A' as u8;
+    buf_display[6] = '-' as u8;
+    buf_display[7] = 'D' as u8;
+    buf_display[8] = 'I' as u8;
+    buf_display[9] = 'O' as u8;
+    buf_display[10] = '_' as u8;
+    let mut id_count = format_id(&id_unique, &mut buf_display[11..]);
+    id_count += 11;
 
     // --------------------------------------------------------------
     // Get pins of the systems
@@ -146,7 +190,8 @@ unsafe fn main() -> ! {
         .strings(&[StringDescriptors::default()
             .manufacturer("panduza")
             .product("picoha-dio")
-            .serial_number("TEST")])
+            // .serial_number("TEST")
+            .serial_number(str::from_utf8(&buf_display[..id_count]).unwrap())])
         .unwrap()
         .device_class(2) // from: https://www.usb.org/defined-class-codes
         .build();

@@ -37,6 +37,8 @@ serial-line-ip = { git = "https://github.com/Panduza/serial-line-ip-rs", branch 
 
 fugit = "0.3.7"
 
+rp2040-flash = "0.5.1"
+
 [build-dependencies]
 femtopb-build = "0.4.5"
 
