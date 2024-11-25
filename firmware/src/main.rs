@@ -64,21 +64,28 @@ use rp_pico::hal::gpio::{FunctionPio0, Pin};
 use serial_line_ip;
 
 fn format_id(id: &[u8], buf: &mut [u8]) -> usize {
+
+
     let mut i = 0;
     for byte in id {
+        
+        // print_debug_message!("convert {:?}\r\n", byte);
+
         let high_nibble = (byte >> 4) & 0xF;
         let low_nibble = byte & 0xF;
         buf[i] = if high_nibble < 10 {
             b'0' + high_nibble as u8
         } else {
-            b'a' + (high_nibble - 10) as u8
+            b'A' + (high_nibble - 10) as u8
         };
+        // print_debug_message!("- {:?}\r\n", buf[i]);
         i += 1;
         buf[i] = if low_nibble < 10 {
             b'0' + low_nibble as u8
         } else {
-            b'a' + (low_nibble - 10) as u8
+            b'A' + (low_nibble - 10) as u8
         };
+        // print_debug_message!("- {:?}\r\n", buf[i]);
         i += 1;
     }
     i
@@ -116,20 +123,7 @@ unsafe fn main() -> ! {
     let mut id_unique: [u8; 8] = [0; 8];
     rp2040_flash::flash::flash_unique_id(&mut id_unique, use_boot2);
 
-    let mut buf_display: [u8; 100] = [0; 100];
-    buf_display[0] = 'P' as u8;
-    buf_display[1] = 'I' as u8;
-    buf_display[2] = 'C' as u8;
-    buf_display[3] = 'O' as u8;
-    buf_display[4] = 'H' as u8;
-    buf_display[5] = 'A' as u8;
-    buf_display[6] = '-' as u8;
-    buf_display[7] = 'D' as u8;
-    buf_display[8] = 'I' as u8;
-    buf_display[9] = 'O' as u8;
-    buf_display[10] = '_' as u8;
-    let mut id_count = format_id(&id_unique, &mut buf_display[11..]);
-    id_count += 11;
+  
 
     // --------------------------------------------------------------
     // Get pins of the systems
@@ -173,6 +167,40 @@ unsafe fn main() -> ! {
 
     print_debug_message!(b"Firmware Start!\r\n");
 
+
+    let mut buf_display: [u8; 100] = [0; 100];
+    buf_display[0] = 'P' as u8;
+    buf_display[1] = 'I' as u8;
+    buf_display[2] = 'C' as u8;
+    buf_display[3] = 'O' as u8;
+    buf_display[4] = 'H' as u8;
+    buf_display[5] = 'A' as u8;
+    buf_display[6] = 'D' as u8;
+    buf_display[7] = 'I' as u8;
+    buf_display[8] = 'O' as u8;
+    let mut id_count = format_id(&id_unique, &mut buf_display[9..]);
+    id_count += 9;
+
+
+    // PICOHADIO_E6 61 64 07 E3 35 3C 27
+    
+    // let id_count = 9;
+
+    let mut serial_id_str = "ERROR";
+    let serial_id_converted = str::from_utf8(&buf_display[..id_count]);
+
+    print_debug_message!("jedec_id {:?}\r\n", jedec_id);
+
+    match serial_id_converted {
+        Ok(serial_id) => {
+            serial_id_str = serial_id;
+            print_debug_message!("Serial ID {:?}\r\n", serial_id_str);
+        },
+        Err(e) => {
+            print_debug_message!("Serial ID err = {:?}\r\n", e);
+        }
+    }
+        
     // --------------------------------------------------------------
     // USB CDC
     // Set up the USB driver
@@ -191,7 +219,10 @@ unsafe fn main() -> ! {
             .manufacturer("panduza")
             .product("picoha-dio")
             // .serial_number("TEST")
-            .serial_number(str::from_utf8(&buf_display[..id_count]).unwrap())])
+            .serial_number(serial_id_str)
+            
+            // .serial_number(str::from_utf8(&buf_display[..id_count]).unwrap())
+            ])
         .unwrap()
         .device_class(2) // from: https://www.usb.org/defined-class-codes
         .build();
