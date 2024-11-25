@@ -8,7 +8,7 @@ use crate::{
 };
 use core::fmt::Write;
 
-use embedded_hal::digital::OutputPin;
+use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
 use rp2040_hal::gpio::new_pin;
 // Message deserialization support
 use femtopb::Message;
@@ -32,6 +32,13 @@ type PinI = rp2040_hal::gpio::Pin<
 >;
 const PINI_NONE: Option<PinI> = None;
 
+enum PinDirection {
+    input, output
+}
+enum PinValue {
+    low, high
+}
+
 /// Application Digital I/O
 pub struct DioRequestProcessor {
     pins_id: [Option<DynPinId>; MAX_PINS],
@@ -48,6 +55,92 @@ impl DioRequestProcessor {
             pins_o: [PINO_NONE; MAX_PINS],
             pins_i: [PINI_NONE; MAX_PINS],
         }
+    }
+
+    ///
+    /// Initialize all pins as input
+    /// 
+    pub fn init_all_pins_as_input(&mut self) {
+        for n in 0..30 {
+            self.set_pin_as_input(n);
+        }
+    }
+
+    /// Check internal configuration to get the pin direction configuration
+    /// 
+    fn get_internal_pin_direction(&self, pin: usize) -> Option<PinDirection> {
+        // Debug
+        // print_debug_message!("? check pin {:?}\r\n", pin);
+
+        // if pin is in the output array, it is configured as output
+        if self.pins_o[pin].is_some() {
+            return Some(PinDirection::output);
+        }
+
+        // if pin is in the input array, it is configured as input
+        if self.pins_i[pin].is_some() {
+            return Some(PinDirection::input);
+        }
+
+        // else not configured yet
+        // print_debug_message!(b"? not configured\r\n");
+        None
+    }
+
+
+    /// Check internal configuration to get the pin direction configuration
+    /// 
+    fn get_internal_pin_value(&mut self, pin: usize) -> Option<PinValue> {
+        // Debug
+        // print_debug_message!("? check pin {:?}\r\n", pin);
+
+        
+        let dir = self.get_internal_pin_direction(pin);
+        match dir {
+            Some(d) => {
+                match d {
+                    PinDirection::input => {
+                        let pin_obj = &mut self.pins_i[pin];
+                        if let Some(pin_obj) = pin_obj {
+                            if let Ok(is_high) = pin_obj.is_high() {
+                                if is_high {
+                                    return Some(PinValue::high);
+                                } 
+                            }
+                            if let Ok(is_low) = pin_obj.is_low() {
+                                if is_low {
+                                    return Some(PinValue::low);
+                                } 
+                            }
+                        }
+                    },
+                    PinDirection::output => {
+                        let pin_obj = &mut self.pins_o[pin];
+                        if let Some(pin_obj) = pin_obj {
+                            
+                            if let Ok(is_high) = pin_obj.is_set_high() {
+                                if is_high {
+                                    return Some(PinValue::high);
+                                } 
+                            }
+                            if let Ok(is_low) = pin_obj.is_set_low() {
+                                if is_low {
+                                    return Some(PinValue::low);
+                                } 
+                            }
+                            
+                        }
+                    }
+                }
+            }
+            None => {
+                return None;
+            }
+        }
+
+        // else not configured yet
+        // print_debug_message!(b"? not configured\r\n");
+        None
     }
 
     /// Set a pin as output
@@ -233,16 +326,46 @@ impl DioRequestProcessor {
         Self::send_answer(serial, answer);
     }
 
+    ///
+    /// This function process an incoming request to get a pin direction
+    /// 
     fn process_request_get_pin_direction(
         &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
+        // Debug log
         print_debug_message!(b"      * processing request: GET_PIN_DIRECTION\r\n");
+
+        // Prepare a default answer
         let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        
+        // Fill the return message
+        // Success if the pin has a direction set
+        // Failure if the pin is not already configured
+        match self.get_internal_pin_direction(request.pin_num as usize) {
+            Some(direction) => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+                match direction {
+                    PinDirection::input => {
+                        print_debug_message!(b"      * input\r\n");
+                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
+                    }
+                    PinDirection::output =>  {
+                        print_debug_message!(b"      * output\r\n");
+                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
+                    }
+                }
+            },
+            None => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+            },
+        }
+
+        // Send back the message
         Self::send_answer(serial, answer);
     }
+
 
     fn process_request_get_pin_value(
         &mut self,
@@ -252,6 +375,28 @@ impl DioRequestProcessor {
         print_debug_message!(b"      * processing request: GET_PIN_VALUE\r\n");
         let mut answer = PicohaDioAnswer::default();
         answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+
+        
+        match self.get_internal_pin_value(request.pin_num as usize) {
+            Some(val) => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+                match val {
+                    PinValue::low => {
+                        print_debug_message!(b"      * low\r\n");
+                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Low));
+                    }
+                    PinValue::high =>  {
+                        print_debug_message!(b"      * high\r\n");
+                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::High));
+                    }
+                }
+            },
+            None => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+            },
+        }
+
+
         Self::send_answer(serial, answer);
     }
 
@@ -262,6 +407,7 @@ impl DioRequestProcessor {
         let encoded_len = answer.encoded_len();
         answer.encode(&mut buffer.as_mut()).unwrap();
 
+        print_debug_message!("      * answer: {:?}", answer);
         // print_debug_message!("      * sending answer: {:?}", encoded_len);
         // print_debug_message!("      * sending answer: {:?}", &buffer[..encoded_len]);
 

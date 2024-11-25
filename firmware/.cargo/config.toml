@@ -3,7 +3,12 @@
 # - `probe-rs` provides flashing and defmt via a hardware debugger, and stack unwind on panic
 # - elf2uf2-rs loads firmware over USB when the rp2040 is in boot mode
 # runner = "probe-rs run --chip RP2040 --protocol swd"
+
+# To load the program directly
 runner = "elf2uf2-rs -d"
+
+# To generate the uf2
+# runner = "elf2uf2-rs"
 
 rustflags = [
   # "-C",
