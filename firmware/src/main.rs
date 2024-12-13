@@ -64,11 +64,8 @@ use rp_pico::hal::gpio::{FunctionPio0, Pin};
 use serial_line_ip;
 
 fn format_id(id: &[u8], buf: &mut [u8]) -> usize {
-
-
     let mut i = 0;
     for byte in id {
-        
         // print_debug_message!("convert {:?}\r\n", byte);
 
         let high_nibble = (byte >> 4) & 0xF;
@@ -123,8 +120,6 @@ unsafe fn main() -> ! {
     let mut id_unique: [u8; 8] = [0; 8];
     rp2040_flash::flash::flash_unique_id(&mut id_unique, use_boot2);
 
-  
-
     // --------------------------------------------------------------
     // Get pins of the systems
     let pins: rp_pico::Pins = bsp::Pins::new(
@@ -167,7 +162,6 @@ unsafe fn main() -> ! {
 
     print_debug_message!(b"Firmware Start!\r\n");
 
-
     let mut buf_display: [u8; 100] = [0; 100];
     buf_display[0] = 'P' as u8;
     buf_display[1] = 'I' as u8;
@@ -181,9 +175,8 @@ unsafe fn main() -> ! {
     let mut id_count = format_id(&id_unique, &mut buf_display[9..]);
     id_count += 9;
 
-
     // PICOHADIO_E6 61 64 07 E3 35 3C 27
-    
+
     // let id_count = 9;
 
     let mut serial_id_str = "ERROR";
@@ -195,12 +188,12 @@ unsafe fn main() -> ! {
         Ok(serial_id) => {
             serial_id_str = serial_id;
             print_debug_message!("Serial ID {:?}\r\n", serial_id_str);
-        },
+        }
         Err(e) => {
             print_debug_message!("Serial ID err = {:?}\r\n", e);
         }
     }
-        
+
     // --------------------------------------------------------------
     // USB CDC
     // Set up the USB driver
@@ -215,14 +208,13 @@ unsafe fn main() -> ! {
     let mut serial: SerialPort<rp2040_hal::usb::UsbBus> = SerialPort::new(&usb_bus);
     // Create a USB device with a fake VID and PID
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x05E1))
-        .strings(&[StringDescriptors::default()
-            .manufacturer("panduza")
-            .product("picoha-dio")
-            // .serial_number("TEST")
-            .serial_number(serial_id_str)
-            
-            // .serial_number(str::from_utf8(&buf_display[..id_count]).unwrap())
-            ])
+        .strings(&[
+            StringDescriptors::default()
+                .manufacturer("panduza")
+                .product("picoha-dio")
+                // .serial_number("TEST")
+                .serial_number(serial_id_str), // .serial_number(str::from_utf8(&buf_display[..id_count]).unwrap())
+        ])
         .unwrap()
         .device_class(2) // from: https://www.usb.org/defined-class-codes
         .build();
@@ -292,9 +284,11 @@ unsafe fn main() -> ! {
                     print_debug_message!("+ recieved: {:?}", data);
 
                     loop {
+                        // print_debug_message!(b"1");
                         // Check if we have enough data to decode
                         match decode_buffer.feed(data) {
-                            core::prelude::v1::Ok((nb_bytes_processed, found_trame_complete)) => {
+                            Ok((nb_bytes_processed, found_trame_complete)) => {
+                                // print_debug_message!(b"2");
                                 if found_trame_complete {
                                     let trame = decode_buffer.slice();
                                     let request = try_to_decode_api_request(trame).unwrap();
@@ -303,10 +297,12 @@ unsafe fn main() -> ! {
                                     decode_buffer.reset();
                                     data = &buf[..count - nb_bytes_processed];
                                 } else {
+                                    // print_debug_message!(b"3");
                                     break;
                                 }
                             }
-                            _ => {
+                            other => {
+                                print_debug_message!("{:?}", other);
                                 break;
                             }
                         }

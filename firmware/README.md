@@ -1,5 +1,7 @@
 # Panduza Device PicoHa DIO
 
+- rustc 1.83.0 (90b35a623 2024-11-26)
+
 ## Flash your pico
 
 First install Rust in your computer (https://www.rust-lang.org/tools/install)
