@@ -1,5 +1,4 @@
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::femtopb::Message)]
+#[derive(Clone, Copy, PartialEq, ::femtopb::Message)]
 pub struct PicohaDioRequest<'a> {
     #[femtopb(enumeration, tag = 1)]
     pub r#type: ::femtopb::enumeration::EnumValue<RequestType>,
@@ -10,7 +9,6 @@ pub struct PicohaDioRequest<'a> {
     #[femtopb(unknown_fields)]
     pub unknown_fields: femtopb::UnknownFields<'a>,
 }
-#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::femtopb::Message)]
 pub struct PicohaDioAnswer<'a> {
     #[femtopb(enumeration, tag = 1)]
@@ -50,11 +48,11 @@ impl RequestType {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            RequestType::Ping => "PING",
-            RequestType::SetPinDirection => "SET_PIN_DIRECTION",
-            RequestType::SetPinValue => "SET_PIN_VALUE",
-            RequestType::GetPinDirection => "GET_PIN_DIRECTION",
-            RequestType::GetPinValue => "GET_PIN_VALUE",
+            Self::Ping => "PING",
+            Self::SetPinDirection => "SET_PIN_DIRECTION",
+            Self::SetPinValue => "SET_PIN_VALUE",
+            Self::GetPinDirection => "GET_PIN_DIRECTION",
+            Self::GetPinValue => "GET_PIN_VALUE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -69,6 +67,8 @@ impl RequestType {
         }
     }
 }
+/// This structure should be splitted
+/// 1 for values and 1 for directions
 #[derive(
     Clone,
     Copy,
@@ -96,10 +96,10 @@ impl PinValue {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            PinValue::Low => "LOW",
-            PinValue::High => "HIGH",
-            PinValue::Input => "INPUT",
-            PinValue::Output => "OUTPUT",
+            Self::Low => "LOW",
+            Self::High => "HIGH",
+            Self::Input => "INPUT",
+            Self::Output => "OUTPUT",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -138,8 +138,8 @@ impl AnswerType {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            AnswerType::Success => "SUCCESS",
-            AnswerType::Failure => "FAILURE",
+            Self::Success => "SUCCESS",
+            Self::Failure => "FAILURE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.

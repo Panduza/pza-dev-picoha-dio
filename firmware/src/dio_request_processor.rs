@@ -230,15 +230,19 @@ impl DioRequestProcessor {
         Ok(())
     }
 
-    ///
+    /// Process a request, main entry point
     ///
     pub fn process_request(
         &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
+        //
+        // Debug log
         print_debug_message!("+ processing request: {:?}", request);
 
+        //
+        // Choose the correct process function
         match request.r#type {
             femtopb::EnumValue::Known(k) => match k {
                 crate::api_dio::RequestType::Ping => Self::process_request_ping(serial),
@@ -300,7 +304,12 @@ impl DioRequestProcessor {
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
+        //
+        // Debug log
         print_debug_message!(b"\tprocessing request: SET_PIN_VALUE\r\n");
+
+        //
+        // Process the request
         let r = match request.value {
             femtopb::EnumValue::Known(v) => match v {
                 crate::api_dio::PinValue::Low => self.set_pin_low(request.pin_num),
@@ -372,11 +381,17 @@ impl DioRequestProcessor {
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
+        //
+        // Debug log
         print_debug_message!(b"      * processing request: GET_PIN_VALUE\r\n");
+
+        //
+        // Prepare a default answer
         let mut answer = PicohaDioAnswer::default();
         answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
 
-        
+        //
+        // Fill the return message
         match self.get_internal_pin_value(request.pin_num as usize) {
             Some(val) => {
                 answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
@@ -396,7 +411,8 @@ impl DioRequestProcessor {
             },
         }
 
-
+        //
+        // Send back the message
         Self::send_answer(serial, answer);
     }
 

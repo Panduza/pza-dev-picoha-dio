@@ -32,7 +32,7 @@ irq = "0.2.3"
 
 # no_proto = "0.9.60"
 # protobuf-codegen = "3.5.0"
-femtopb = "0.4.5"
+femtopb = "0.6.0"
 serial-line-ip = { git = "https://github.com/Panduza/serial-line-ip-rs", branch = "stream_buffer_feature" }
 
 fugit = "0.3.7"
@@ -40,7 +40,7 @@ fugit = "0.3.7"
 rp2040-flash = "0.5.1"
 
 [build-dependencies]
-femtopb-build = "0.4.5"
+femtopb-build = "0.6.0"
 
 # cargo build/run
 [profile.dev]
