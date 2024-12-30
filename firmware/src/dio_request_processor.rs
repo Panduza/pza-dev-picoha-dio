@@ -64,7 +64,7 @@ impl DioRequestProcessor {
     ///
     pub fn init_all_pins_as_input(&mut self) {
         for n in 0..MAX_PINS {
-            self.set_pin_as_input(n as u32);
+            self.set_pin_as_input(n);
         }
     }
 
@@ -132,13 +132,17 @@ impl DioRequestProcessor {
 
     /// Set a pin as output
     ///
-    fn set_pin_as_output(&mut self, pin_num: u32) {
+    fn set_pin_as_output(&mut self, pin_num: usize) {
         print_debug_message!("\tset pin {:?} as output", pin_num);
         self.pins_id[pin_num as usize]
             .map(|dyn_id| unsafe {
                 let pin = new_pin(dyn_id);
                 pin.try_into_function::<rp2040_hal::gpio::FunctionSioOutput>()
                     .and_then(|pin_out| {
+                        //
+                        // Remove pin from ouput array if it is there
+                        self.pins_i[pin_num] = None;
+
                         self.pins_o[pin_num as usize] = Some(pin_out);
                         Ok(())
                     })
@@ -160,13 +164,22 @@ impl DioRequestProcessor {
 
     /// Set a pin as input
     ///
-    fn set_pin_as_input(&mut self, pin_num: u32) {
+    fn set_pin_as_input(&mut self, pin_num: usize) {
+        //
+        // Debug log
         print_debug_message!("\tset pin {:?} as input", pin_num);
+
+        //
+        // Set the pin as input
         self.pins_id[pin_num as usize]
             .map(|dyn_id| unsafe {
                 let pin = new_pin(dyn_id);
                 pin.try_into_function::<rp2040_hal::gpio::FunctionSioInput>()
                     .and_then(|mut pin_in| {
+                        //
+                        // Remove pin from ouput array if it is there
+                        self.pins_o[pin_num] = None;
+
                         // pin_in.set_pull_type(rp2040_hal::gpio::DynPullType::None);
                         pin_in.set_pull_type(rp2040_hal::gpio::DynPullType::Down);
                         self.pins_i[pin_num as usize] = Some(pin_in);
@@ -270,8 +283,10 @@ impl DioRequestProcessor {
 
         match request.value {
             femtopb::EnumValue::Known(v) => match v {
-                crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num),
-                crate::api_dio::PinValue::Output => self.set_pin_as_output(request.pin_num),
+                crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num as usize),
+                crate::api_dio::PinValue::Output => {
+                    self.set_pin_as_output(request.pin_num as usize)
+                }
                 _ => {
                     print_debug_message!("      * invalid value: {:?}", v);
                 }
