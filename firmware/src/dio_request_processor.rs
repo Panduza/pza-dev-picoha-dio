@@ -33,10 +33,12 @@ type PinI = rp2040_hal::gpio::Pin<
 const PINI_NONE: Option<PinI> = None;
 
 enum PinDirection {
-    input, output
+    input,
+    output,
 }
 enum PinValue {
-    low, high
+    low,
+    high,
 }
 
 /// Application Digital I/O
@@ -59,7 +61,7 @@ impl DioRequestProcessor {
 
     ///
     /// Initialize all pins as input
-    /// 
+    ///
     pub fn init_all_pins_as_input(&mut self) {
         for n in 0..30 {
             self.set_pin_as_input(n);
@@ -67,7 +69,7 @@ impl DioRequestProcessor {
     }
 
     /// Check internal configuration to get the pin direction configuration
-    /// 
+    ///
     fn get_internal_pin_direction(&self, pin: usize) -> Option<PinDirection> {
         // Debug
         // print_debug_message!("? check pin {:?}\r\n", pin);
@@ -87,52 +89,46 @@ impl DioRequestProcessor {
         None
     }
 
-
     /// Check internal configuration to get the pin direction configuration
-    /// 
+    ///
     fn get_internal_pin_value(&mut self, pin: usize) -> Option<PinValue> {
         // Debug
         // print_debug_message!("? check pin {:?}\r\n", pin);
 
-        
         let dir = self.get_internal_pin_direction(pin);
         match dir {
-            Some(d) => {
-                match d {
-                    PinDirection::input => {
-                        let pin_obj = &mut self.pins_i[pin];
-                        if let Some(pin_obj) = pin_obj {
-                            if let Ok(is_high) = pin_obj.is_high() {
-                                if is_high {
-                                    return Some(PinValue::high);
-                                } 
-                            }
-                            if let Ok(is_low) = pin_obj.is_low() {
-                                if is_low {
-                                    return Some(PinValue::low);
-                                } 
+            Some(d) => match d {
+                PinDirection::input => {
+                    let pin_obj = &mut self.pins_i[pin];
+                    if let Some(pin_obj) = pin_obj {
+                        if let Ok(is_high) = pin_obj.is_high() {
+                            if is_high {
+                                return Some(PinValue::high);
                             }
                         }
-                    },
-                    PinDirection::output => {
-                        let pin_obj = &mut self.pins_o[pin];
-                        if let Some(pin_obj) = pin_obj {
-                            
-                            if let Ok(is_high) = pin_obj.is_set_high() {
-                                if is_high {
-                                    return Some(PinValue::high);
-                                } 
+                        if let Ok(is_low) = pin_obj.is_low() {
+                            if is_low {
+                                return Some(PinValue::low);
                             }
-                            if let Ok(is_low) = pin_obj.is_set_low() {
-                                if is_low {
-                                    return Some(PinValue::low);
-                                } 
-                            }
-                            
                         }
                     }
                 }
-            }
+                PinDirection::output => {
+                    let pin_obj = &mut self.pins_o[pin];
+                    if let Some(pin_obj) = pin_obj {
+                        if let Ok(is_high) = pin_obj.is_set_high() {
+                            if is_high {
+                                return Some(PinValue::high);
+                            }
+                        }
+                        if let Ok(is_low) = pin_obj.is_set_low() {
+                            if is_low {
+                                return Some(PinValue::low);
+                            }
+                        }
+                    }
+                }
+            },
             None => {
                 return None;
             }
@@ -337,7 +333,7 @@ impl DioRequestProcessor {
 
     ///
     /// This function process an incoming request to get a pin direction
-    /// 
+    ///
     fn process_request_get_pin_direction(
         &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
@@ -348,7 +344,7 @@ impl DioRequestProcessor {
 
         // Prepare a default answer
         let mut answer = PicohaDioAnswer::default();
-        
+
         // Fill the return message
         // Success if the pin has a direction set
         // Failure if the pin is not already configured
@@ -358,23 +354,24 @@ impl DioRequestProcessor {
                 match direction {
                     PinDirection::input => {
                         print_debug_message!(b"      * input\r\n");
-                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
+                        answer.value =
+                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
                     }
-                    PinDirection::output =>  {
+                    PinDirection::output => {
                         print_debug_message!(b"      * output\r\n");
-                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
+                        answer.value =
+                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
                     }
                 }
-            },
+            }
             None => {
                 answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
-            },
+            }
         }
 
         // Send back the message
         Self::send_answer(serial, answer);
     }
-
 
     fn process_request_get_pin_value(
         &mut self,
@@ -398,17 +395,19 @@ impl DioRequestProcessor {
                 match val {
                     PinValue::low => {
                         print_debug_message!(b"      * low\r\n");
-                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Low));
+                        answer.value =
+                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Low));
                     }
-                    PinValue::high =>  {
+                    PinValue::high => {
                         print_debug_message!(b"      * high\r\n");
-                        answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::High));
+                        answer.value =
+                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::High));
                     }
                 }
-            },
+            }
             None => {
                 answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
-            },
+            }
         }
 
         //
