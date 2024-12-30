@@ -221,7 +221,7 @@ unsafe fn main() -> ! {
 
     // --------------------------------------------------------------
 
-    let mut pins_id: [Option<DynPinId>; 30] = [
+    let mut pins_id: [Option<DynPinId>; 23] = [
         None, // 0 debug uart
         None, // 1 debug uart
         Some(pins.gpio2.into_dyn_pin().id()),
@@ -245,13 +245,13 @@ unsafe fn main() -> ! {
         Some(pins.gpio20.into_dyn_pin().id()),
         Some(pins.gpio21.into_dyn_pin().id()),
         Some(pins.gpio22.into_dyn_pin().id()),
-        None,                               // 23
-        None,                               // 24
-        Some(pins.led.into_dyn_pin().id()), // 25 led
-        None,                               // 26
-        None,                               // 27
-        Some(pins.gpio28.into_dyn_pin().id()),
-        None,
+        // None, // 23
+        // None, // 24
+        // None, // 25 led
+        // None, // 26
+        // None, // 27
+        // None,
+        // None,
     ];
     #[cfg(not(any(feature = "uart0_debug")))]
     {

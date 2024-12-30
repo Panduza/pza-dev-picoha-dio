@@ -17,7 +17,7 @@ use rp2040_hal::gpio::DynPinId;
 // USB Communications Class Device support
 use usbd_serial::SerialPort;
 
-const MAX_PINS: usize = 30;
+const MAX_PINS: usize = 23;
 
 type PinO = rp2040_hal::gpio::Pin<
     rp2040_hal::gpio::DynPinId,
@@ -63,8 +63,8 @@ impl DioRequestProcessor {
     /// Initialize all pins as input
     ///
     pub fn init_all_pins_as_input(&mut self) {
-        for n in 0..30 {
-            self.set_pin_as_input(n);
+        for n in 0..MAX_PINS {
+            self.set_pin_as_input(n as u32);
         }
     }
 
@@ -93,7 +93,7 @@ impl DioRequestProcessor {
     ///
     fn get_internal_pin_value(&mut self, pin: usize) -> Option<PinValue> {
         // Debug
-        // print_debug_message!("? check pin {:?}\r\n", pin);
+        print_debug_message!("? check pin {:?}\r\n", pin);
 
         let dir = self.get_internal_pin_direction(pin);
         match dir {
@@ -109,17 +109,13 @@ impl DioRequestProcessor {
                     }
                 }
                 PinDirection::output => {
+                    print_debug_message!(b"      * output ?\r\n");
                     let pin_obj = &mut self.pins_o[pin];
                     if let Some(pin_obj) = pin_obj {
-                        if let Ok(is_high) = pin_obj.is_set_high() {
-                            if is_high {
-                                return Some(PinValue::high);
-                            }
-                        }
-                        if let Ok(is_low) = pin_obj.is_set_low() {
-                            if is_low {
-                                return Some(PinValue::low);
-                            }
+                        match pin_obj.is_set_high() {
+                            Ok(true) => return Some(PinValue::high),
+                            Ok(false) => return Some(PinValue::low),
+                            Err(_) => {} // Infalible
                         }
                     }
                 }
