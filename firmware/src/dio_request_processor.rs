@@ -101,15 +101,10 @@ impl DioRequestProcessor {
                 PinDirection::input => {
                     let pin_obj = &mut self.pins_i[pin];
                     if let Some(pin_obj) = pin_obj {
-                        if let Ok(is_high) = pin_obj.is_high() {
-                            if is_high {
-                                return Some(PinValue::high);
-                            }
-                        }
-                        if let Ok(is_low) = pin_obj.is_low() {
-                            if is_low {
-                                return Some(PinValue::low);
-                            }
+                        match pin_obj.is_high() {
+                            Ok(true) => return Some(PinValue::high),
+                            Ok(false) => return Some(PinValue::low),
+                            Err(_) => {} // Infalible
                         }
                     }
                 }
