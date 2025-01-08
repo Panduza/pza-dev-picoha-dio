@@ -220,8 +220,8 @@ unsafe fn main() -> ! {
         .build();
 
     // --------------------------------------------------------------
-
-    let mut pins_id: [Option<DynPinId>; 23] = [
+    const MAX_PINS: usize = 29;
+    let mut pins_id: [Option<DynPinId>; MAX_PINS] = [
         None, // 0 debug uart
         None, // 1 debug uart
         Some(pins.gpio2.into_dyn_pin().id()),
@@ -245,13 +245,13 @@ unsafe fn main() -> ! {
         Some(pins.gpio20.into_dyn_pin().id()),
         Some(pins.gpio21.into_dyn_pin().id()),
         Some(pins.gpio22.into_dyn_pin().id()),
-        // None, // 23
-        // None, // 24
-        // None, // 25 led
-        // None, // 26
-        // None, // 27
-        // None,
-        // None,
+        None, // 23 Controls the on-board SMPS Power Save pin
+        None, // 24 VBUS sense - high if VBUS is present, else low
+        None, // 25 Connected to user LED
+        Some(pins.gpio26.into_dyn_pin().id()),
+        Some(pins.gpio27.into_dyn_pin().id()),
+        Some(pins.gpio28.into_dyn_pin().id())
+        // None, // 29 Used in ADC mode (ADC3) to measure VSYS/3
     ];
     #[cfg(not(any(feature = "uart0_debug")))]
     {

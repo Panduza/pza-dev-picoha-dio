@@ -17,7 +17,7 @@ use rp2040_hal::gpio::DynPinId;
 // USB Communications Class Device support
 use usbd_serial::SerialPort;
 
-const MAX_PINS: usize = 23;
+const MAX_PINS: usize = 29;
 
 type PinO = rp2040_hal::gpio::Pin<
     rp2040_hal::gpio::DynPinId,
