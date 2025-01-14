@@ -86,7 +86,7 @@ Here ```Protobuf Python Version: 5.28.0```
 
 You will need an Raspberry Pico with Panduza Firmware flashed.
 
-To simplified testing we connecte GPIOs by pair, link so:
+To simplified testing we connecte GPIOs by pair, like so:
 
 ![PicoBenchSetup](./images/PicoBenchSetup.png)
 

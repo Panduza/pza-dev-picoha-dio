@@ -49,6 +49,8 @@ def setup_logging(
 
 # ================== Class =====================
 class PicoHostAdapterDio:
+    """Main API class to control Pico Host Adapter Dio"""
+
     def __init__(
         self, serial_COM: str, baudrate: int = 9600, bytesize: int = 8, timeout: int = 2
     ):
