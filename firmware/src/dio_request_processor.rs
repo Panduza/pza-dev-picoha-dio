@@ -18,6 +18,7 @@ use rp2040_hal::gpio::DynPinId;
 use usbd_serial::SerialPort;
 
 const MAX_PINS: usize = 23;
+const AVAILABLE_PIN: &[u32] = &[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,26,27,28];
 
 type PinO = rp2040_hal::gpio::Pin<
     rp2040_hal::gpio::DynPinId,
@@ -247,18 +248,27 @@ impl DioRequestProcessor {
             femtopb::EnumValue::Known(k) => match k {
                 crate::api_dio::RequestType::Ping => Self::process_request_ping(serial),
                 crate::api_dio::RequestType::SetPinDirection => {
-                    self.process_request_set_pin_direction(serial, request)
+                    if AVAILABLE_PIN.contains(&request.pin_num) {
+                        self.process_request_set_pin_direction(serial, request)
+                    }
                 }
                 crate::api_dio::RequestType::SetPinValue => {
-                    self.process_request_set_pin_value(serial, request)
+                    if AVAILABLE_PIN.contains(&request.pin_num) {
+                        self.process_request_set_pin_value(serial, request)
+                    }
                 }
                 crate::api_dio::RequestType::GetPinDirection => {
-                    self.process_request_get_pin_direction(serial, request)
+                    if AVAILABLE_PIN.contains(&request.pin_num) {
+                        self.process_request_get_pin_direction(serial, request)
+                    }
                 }
                 crate::api_dio::RequestType::GetPinValue => {
-                    self.process_request_get_pin_value(serial, request)
+                    if AVAILABLE_PIN.contains(&request.pin_num) {
+                        self.process_request_get_pin_value(serial, request)
+                    }
                 }
             },
+            // Error when Unknown commend
             femtopb::EnumValue::Unknown(_) => todo!(),
         }
     }
