@@ -114,7 +114,7 @@ def check_gpio_direction(gpio: int, direction: str):
 def check_gpio_value(gpio: int, value):
     """Verified for a given GPIO than its value is set by reading the input on its paired GPIO"""
     if not get_gpio_value(gpio) == value:
-        raise ValueError(f"GPIO '{gpio} is not set as {value}")
+        raise ValueError(f"GPIO '{gpio}' is not set as {value}")
     else:
         return True
 

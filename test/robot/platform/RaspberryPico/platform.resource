@@ -12,13 +12,13 @@ Library     platform_data.py
 
 *** Variables ***
 ${Status_Last_CMD} =    None
-${COM} =     COM4
+${COM} =     COM5
 
 *** Keywords ***
 
 Main Test Platform Setup
     [Documentation]    Prepare testing environement
-    Set Log Level    DEBUG
+    Set Log Level    TRACE
     Connect to    ${COM} 
     Log     "RaspberryPico Setup"
 
@@ -80,7 +80,7 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     FOR    ${gpio}   IN  @{GPIOs_list}
         Log    "${gpio} under test: comp set to ${value}"
         ${gpio_comp} =    Get Comp Gpio    ${gpio}
-        ${Status}    set gpio value    ${gpio}    ${value}
+        ${Status}    set gpio value    ${gpio_comp}    ${value}
     END
 
 @{GPIOs_list} value read must be "${value}"
