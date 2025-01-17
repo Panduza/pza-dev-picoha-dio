@@ -90,10 +90,13 @@ class PicoHostAdapterDio:
             )
         except TypeError as err:
             logging.error(f"TypeError: {err}")
+            raise PicoHostAdapterDio(err)
         except AttributeError as err:
             logging.error(f"AttributeError: {err}")
+            raise PicoHostAdapterDio(err)
         except Exception as err:
             logging.error(f"Request Error: {err}")
+            raise PicoHostAdapterDio(err)
 
     def __picoha_dio_answer(self):
         """Wait answer on serial COM"""
@@ -113,6 +116,7 @@ class PicoHostAdapterDio:
             return picoha_dio_answer
         except Exception as err:
             logging.error(err)
+            raise PicoHostAdapterDio(err)
 
     def is_connected(self) -> bool:
         """Check if the serial port is open"""
