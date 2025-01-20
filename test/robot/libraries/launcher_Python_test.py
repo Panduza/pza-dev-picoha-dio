@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Launcher Python tests"""
+"""
+Launcher Python tests. 
+Decorator to manage python test and usefull fonction are discribe here.
+"""
 
 import __future__
 
@@ -18,6 +21,8 @@ _results = []
 
 
 # ================== Class =====================
+
+
 class TimeoutException(Exception):
     # Do nothing only handle timeout error
     pass
@@ -30,7 +35,12 @@ class TestFailException(Exception):
 # ================== Decorator =================
 
 
-def timeout_wrapper(timeout):
+def timeout_wrapper(timeout=60):
+    """
+    Launch a fonction and break it on timeout.
+    Default timeout: 60 sec.
+    """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -59,15 +69,17 @@ def timeout_wrapper(timeout):
 
 
 def test_launcher(func):
+    """Launch a test and handle its verdict"""
+
     def wrapper(*args, **kwargs):
-        test = {"test": func.__name__, "status": "ONGOING"}
+        test = {"test": func.__name__, "verdict": "ONGOING"}
         try:
             func(*args, **kwargs)
-            test.update({"status": "PASS"})
+            test.update({"verdict": "PASS"})
         except TimeoutException as e:
             test.update({"error": e})
         except Exception as e:
-            test.update({"status": "FAIL", "error": e})
+            test.update({"verdict": "FAIL", "error": e})
         finally:
             _results.append(test)
 
@@ -78,33 +90,50 @@ def test_launcher(func):
 
 
 def results_md_chart():
-    report = f'| {"Status":10} | {"Tests Name":40} | Error |\n'
+    """Display result in chart on markdown format"""
+    report = f'| {"Verdict":10} | {"Tests Name":40} | Error |\n'
     report += f"| {'':-<10} | {'':-<40} | ----- |\n"
     for result in _results:
-        report += f'| {result["status"]:10} | {result["test"]:40} | {result.get("error") if result.get("error") else f'{"":5}'} |\n'
+        report += f'| {result["verdict"]:10} | {result["test"]:40} | {result.get("error") if result.get("error") else f'{"":5}'} |\n'
     return report
 
 
 def results_csv():
-    report = "Status,Tests_Name,Error\n"
+    """Display result in chart on CSV format"""
+    report = "Verdict,Tests_Name,Error\n"
     for result in _results:
-        report += f'{result["status"]},{result["test"]},{result.get("error") if result.get("error") else ""}\n'
+        report += f'{result["verdict"]},{result["test"]},{result.get("error") if result.get("error") else ""}\n'
     return report
 
 
-def print_results():
+def result_analyze():
+    """Count PASS, FAIL, ONGOING 'verdict' in results"""
     total_test_run = len(_results)
     number_of_test_pass = 0
     number_of_test_ongoing = 0
     number_of_test_fail = 0
 
     for result in _results:
-        if result["status"] == "PASS":
+        if result["verdict"] == "PASS":
             number_of_test_pass += 1
-        if result["status"] == "ONGOING":
+        if result["verdict"] == "ONGOING":
             number_of_test_ongoing += 1
-        if result["status"] == "FAIL":
+        if result["verdict"] == "FAIL":
             number_of_test_fail += 1
+
+    return (
+        total_test_run,
+        number_of_test_pass,
+        number_of_test_ongoing,
+        number_of_test_fail,
+    )
+
+
+def print_results():
+    """Use print fonction to display result in term."""
+    total_test_run, number_of_test_pass, number_of_test_ongoing, number_of_test_fail = (
+        result_analyze()
+    )
 
     print("----------Results----------")
     print("- Detail\n")
@@ -114,7 +143,7 @@ def print_results():
     print(f"    * {number_of_test_pass} tests PASS out of {total_test_run}")
     print(f"    * {number_of_test_fail} tests FAIL out of {total_test_run}")
     print(f"    * {number_of_test_ongoing} tests ONGOING out of {total_test_run}")
-    print(f"Validated a {100*(number_of_test_pass)/total_test_run} %\n")
+    print(f"Validated at {100*(number_of_test_pass)/total_test_run} %.\n")
     print("---------------------------")
 
 

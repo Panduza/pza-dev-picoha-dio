@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Test Suite of no regretion"""
+"""
+Test Suite of no regretion
+Describe small test senarios to help validation of Git issues 
+"""
 
 import __future__
 
@@ -116,13 +119,13 @@ def fail_to_read_gpio_value(test: PicoHostAdapterDio):
 # ============= Main Fonctions =================
 
 if __name__ == "__main__":
-    """Create and run small test senario to help in Git issues validation"""
+    """Run small test senarios to help in Git issues validation"""
 
     # Setup
-    logger = setup_logging(loggingLevel=logging.INFO)
-
+    setup_logging(loggingLevel=logging.INFO)
     test = PicoHostAdapterDio("COM5")
 
+    # Main
     impossible_to_reset_pins(test)
     impossible_to_use_pin(test)
     no_failure_when_using_not_existing_pins(test)
