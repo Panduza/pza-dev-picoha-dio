@@ -98,7 +98,7 @@ the system is asked to set a not existing gpio
 output error must be FAILURE
     [Documentation]    Check the Status of the last commend send
     Log    ${Status_Last_CMD}
-    IF    '${Status_Last_CMD} != "FAILURE"'
+    IF    '${Status_Last_CMD}' != 'FAILURE'
         Fail    Output is't correct, it must be Fail
     END
 
