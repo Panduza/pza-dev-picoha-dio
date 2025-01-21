@@ -18,7 +18,7 @@ use rp2040_hal::gpio::DynPinId;
 use usbd_serial::SerialPort;
 
 const MAX_PINS: usize = 23;
-const AVAILABLE_PIN: &[u32] = &[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,26,27,28];
+const AVAILABLE_GPIO: &[u32] = &[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,26,27,28];
 
 type PinO = rp2040_hal::gpio::Pin<
     rp2040_hal::gpio::DynPinId,
@@ -248,23 +248,47 @@ impl DioRequestProcessor {
             femtopb::EnumValue::Known(k) => match k {
                 crate::api_dio::RequestType::Ping => Self::process_request_ping(serial),
                 crate::api_dio::RequestType::SetPinDirection => {
-                    if AVAILABLE_PIN.contains(&request.pin_num) {
+                    if AVAILABLE_GPIO.contains(&request.pin_num) {
                         self.process_request_set_pin_direction(serial, request)
+                    }
+                    else{
+                        let mut answer = PicohaDioAnswer::default();
+                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                        answer.error_message = Some("GPIO not available");
+                        Self::send_answer(serial, answer);
                     }
                 }
                 crate::api_dio::RequestType::SetPinValue => {
-                    if AVAILABLE_PIN.contains(&request.pin_num) {
+                    if AVAILABLE_GPIO.contains(&request.pin_num) {
                         self.process_request_set_pin_value(serial, request)
+                    }
+                    else{
+                        let mut answer = PicohaDioAnswer::default();
+                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                        answer.error_message = Some("GPIO not available");
+                        Self::send_answer(serial, answer);
                     }
                 }
                 crate::api_dio::RequestType::GetPinDirection => {
-                    if AVAILABLE_PIN.contains(&request.pin_num) {
+                    if AVAILABLE_GPIO.contains(&request.pin_num) {
                         self.process_request_get_pin_direction(serial, request)
+                    }
+                    else{
+                        let mut answer = PicohaDioAnswer::default();
+                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                        answer.error_message = Some("GPIO not available");
+                        Self::send_answer(serial, answer);
                     }
                 }
                 crate::api_dio::RequestType::GetPinValue => {
-                    if AVAILABLE_PIN.contains(&request.pin_num) {
+                    if AVAILABLE_GPIO.contains(&request.pin_num) {
                         self.process_request_get_pin_value(serial, request)
+                    }
+                    else{
+                        let mut answer = PicohaDioAnswer::default();
+                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                        answer.error_message = Some("GPIO not available");
+                        Self::send_answer(serial, answer);
                     }
                 }
             },
@@ -291,21 +315,21 @@ impl DioRequestProcessor {
     ) {
         print_debug_message!(b"      * processing request: SET_PIN_DIRECTION\r\n");
 
-        match request.value {
-            femtopb::EnumValue::Known(v) => match v {
-                crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num as usize),
-                crate::api_dio::PinValue::Output => {
-                    self.set_pin_as_output(request.pin_num as usize)
+                match request.value {
+                    femtopb::EnumValue::Known(v) => match v {
+                        crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num as usize),
+                        crate::api_dio::PinValue::Output => {
+                            self.set_pin_as_output(request.pin_num as usize)
+                        }
+                        _ => {
+                            print_debug_message!("      * invalid value: {:?}", v);
+                        }
+                    },
+                    femtopb::EnumValue::Unknown(_) => todo!(),
                 }
-                _ => {
-                    print_debug_message!("      * invalid value: {:?}", v);
-                }
-            },
-            femtopb::EnumValue::Unknown(_) => todo!(),
-        }
 
         let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
         Self::send_answer(serial, answer);
     }
 
@@ -361,27 +385,27 @@ impl DioRequestProcessor {
         // Prepare a default answer
         let mut answer = PicohaDioAnswer::default();
 
-        // Fill the return message
-        // Success if the pin has a direction set
-        // Failure if the pin is not already configured
-        match self.get_internal_pin_direction(request.pin_num as usize) {
-            Some(direction) => {
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-                match direction {
-                    PinDirection::input => {
-                        print_debug_message!(b"      * input\r\n");
-                        answer.value =
-                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
+                // Fill the return message
+                // Success if the pin has a direction set
+                // Failure if the pin is not already configured
+                match self.get_internal_pin_direction(request.pin_num as usize) {
+                    Some(direction) => {
+                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+                        match direction {
+                            PinDirection::input => {
+                                print_debug_message!(b"      * input\r\n");
+                                answer.value =
+                                    Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
+                            }
+                            PinDirection::output => {
+                                print_debug_message!(b"      * output\r\n");
+                                answer.value =
+                                    Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
+                            }
+                        }
                     }
-                    PinDirection::output => {
-                        print_debug_message!(b"      * output\r\n");
-                        answer.value =
-                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
-                    }
-                }
-            }
-            None => {
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                    None => {
+                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
             }
         }
 
