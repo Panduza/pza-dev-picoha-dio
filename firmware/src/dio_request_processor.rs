@@ -315,21 +315,21 @@ impl DioRequestProcessor {
     ) {
         print_debug_message!(b"      * processing request: SET_PIN_DIRECTION\r\n");
 
-                match request.value {
-                    femtopb::EnumValue::Known(v) => match v {
-                        crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num as usize),
-                        crate::api_dio::PinValue::Output => {
-                            self.set_pin_as_output(request.pin_num as usize)
-                        }
-                        _ => {
-                            print_debug_message!("      * invalid value: {:?}", v);
-                        }
-                    },
-                    femtopb::EnumValue::Unknown(_) => todo!(),
+        match request.value {
+            femtopb::EnumValue::Known(v) => match v {
+                crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num as usize),
+                crate::api_dio::PinValue::Output => {
+                    self.set_pin_as_output(request.pin_num as usize)
                 }
+                _ => {
+                    print_debug_message!("      * invalid value: {:?}", v);
+                }
+            },
+            femtopb::EnumValue::Unknown(_) => todo!(),
+        }
 
         let mut answer = PicohaDioAnswer::default();
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
         Self::send_answer(serial, answer);
     }
 
@@ -385,27 +385,27 @@ impl DioRequestProcessor {
         // Prepare a default answer
         let mut answer = PicohaDioAnswer::default();
 
-                // Fill the return message
-                // Success if the pin has a direction set
-                // Failure if the pin is not already configured
-                match self.get_internal_pin_direction(request.pin_num as usize) {
-                    Some(direction) => {
-                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-                        match direction {
-                            PinDirection::input => {
-                                print_debug_message!(b"      * input\r\n");
+        // Fill the return message
+        // Success if the pin has a direction set
+        // Failure if the pin is not already configured
+        match self.get_internal_pin_direction(request.pin_num as usize) {
+            Some(direction) => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+                match direction {
+                    PinDirection::input => {
+                        print_debug_message!(b"      * input\r\n");
                                 answer.value =
                                     Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
-                            }
-                            PinDirection::output => {
-                                print_debug_message!(b"      * output\r\n");
-                                answer.value =
-                                    Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
-                            }
-                        }
                     }
-                    None => {
-                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                    PinDirection::output => {
+                        print_debug_message!(b"      * output\r\n");
+                        answer.value =
+                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
+                    }
+                }
+            }
+            None => {
+                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
             }
         }
 
@@ -468,7 +468,7 @@ impl DioRequestProcessor {
 
         // Prepare encoding
         let mut encoded_command = [0u8; 1024];
-        let mut slip_encoder = serial_line_ip::Encoder::new();
+        let mut slip_encoder = serial_line_ip::Encoder::new(); 
 
         // Encode the command
         let mut totals = match slip_encoder.encode(&buffer[..encoded_len], &mut encoded_command) {
