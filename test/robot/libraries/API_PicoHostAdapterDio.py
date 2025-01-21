@@ -123,29 +123,51 @@ class PicoHostAdapterDio:
         return self.__serialPort.is_open
 
     def ping_info(self):
-        """Get ping info"""
+        """
+        Get ping info
+        return :
+            type : Status of the command
+        """
         self.__picoha_dio_request(dio.RequestType.PING)
         return self.__picoha_dio_answer().type
 
     def set_gpio_direction(self, gpio: int, direction: dio.PinValue) -> int:
-        """Set direction of pin in INPUT/OUTPUT"""
+        """
+        Set direction of pin in INPUT/OUTPUT
+        return :
+            type : Status of the command
+        """
         self.__picoha_dio_request(dio.RequestType.SET_PIN_DIRECTION, gpio, direction)
         return self.__picoha_dio_answer().type
 
     def set_gpio_value(self, gpio: int, value: dio.PinValue) -> int:
-        """Set value of gpio as HIGH/LOW"""
+        """
+        Set value of gpio as HIGH/LOW
+        return :
+            type : Status of the command
+        """
         self.__picoha_dio_request(dio.RequestType.SET_PIN_VALUE, gpio, value)
         return self.__picoha_dio_answer().type
 
-    def get_gpio_direction(self, gpio: int) -> int:
-        """Get direction of gpio in INPUT/OUTPUT"""
+    def get_gpio_direction(self, gpio: int):
+        """
+        Get direction of gpio in INPUT/OUTPUT
+        return :
+            type : Status of the command
+            value : value of GPIO
+        """
         self.__picoha_dio_request(dio.RequestType.GET_PIN_DIRECTION, gpio)
-        return self.__picoha_dio_answer().value
+        return self.__picoha_dio_answer()
 
-    def get_gpio_value(self, gpio: int) -> int:
-        """Get value of gpio as HIGH/LOW"""
+    def get_gpio_value(self, gpio: int):
+        """
+        Get value of gpio as HIGH/LOW
+        return :
+            type : Status of the command
+            value : value of GPIO
+        """
         self.__picoha_dio_request(dio.RequestType.GET_PIN_VALUE, gpio)
-        return self.__picoha_dio_answer().value
+        return self.__picoha_dio_answer()
 
 
 # ================== Main ======================
@@ -162,10 +184,10 @@ if __name__ == "__main__":
     test.ping_info()
 
     test.set_gpio_direction(gpio=2,direction=dio.PinValue.OUTPUT)
-    test.get_gpio_direction(gpio=2)
+    dir_of_2 = test.get_gpio_direction(gpio=2).value
 
     test.set_gpio_direction(gpio=3,direction=dio.PinValue.INPUT)
-    test.get_gpio_direction(gpio=3)
+    dir_of_3 = test.get_gpio_direction(gpio=3).value
 
     # Main
     for i in range(0,4,1):
@@ -173,5 +195,5 @@ if __name__ == "__main__":
         time.sleep(0.5)
         test.set_gpio_value(gpio=2,value=1-i%2)
         time.sleep(0.5)
-        test.get_gpio_value(gpio=3)
+        test.get_gpio_value(gpio=3).value
     """

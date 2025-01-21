@@ -74,7 +74,7 @@ def set_gpio_direction(gpio: int, direction: dio.PinValue):
 
 def get_gpio_direction(gpio: int):
     """Return the GPIO direction"""
-    direction = test.get_gpio_direction(gpio)
+    direction = test.get_gpio_direction(gpio).value
     if direction == dio.PinValue.INPUT:
         return "INPUT"
     elif direction == dio.PinValue.OUTPUT:
@@ -94,7 +94,7 @@ def set_gpio_value(gpio: int, value):
 
 def get_gpio_value(gpio: int):
     """Return GPIO direction"""
-    value = test.get_gpio_value(gpio)
+    value = test.get_gpio_value(gpio).value
     if value == dio.PinValue.LOW:
         return "LOW"
     elif value == dio.PinValue.HIGH:
