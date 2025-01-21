@@ -34,7 +34,7 @@ def impossible_to_reset_pins(test: PicoHostAdapterDio):
     test.set_gpio_direction(gpio=2, direction=dio.PinValue.OUTPUT)
     test.get_gpio_direction(gpio=2)
     test.set_gpio_direction(gpio=2, direction=dio.PinValue.INPUT)
-    if test.get_gpio_direction(gpio=2) != dio.PinValue.INPUT:
+    if test.get_gpio_direction(gpio=2).value != dio.PinValue.INPUT:
         raise TestFailException("GPIO not re-set to INPUT.")
 
 
@@ -47,11 +47,11 @@ def impossible_to_use_pin(test: PicoHostAdapterDio):
     logging.info("Impossible to use pin 26, 27 #3")
     test.ping_info()
     test.set_gpio_direction(gpio=26, direction=dio.PinValue.OUTPUT)
-    get_26 = test.get_gpio_direction(gpio=26)
+    get_26 = test.get_gpio_direction(gpio=26).value
     test.set_gpio_direction(gpio=27, direction=dio.PinValue.OUTPUT)
-    get_27 = test.get_gpio_direction(gpio=27)
+    get_27 = test.get_gpio_direction(gpio=27).value
     test.set_gpio_direction(gpio=28, direction=dio.PinValue.OUTPUT)
-    get_28 = test.get_gpio_direction(gpio=28)
+    get_28 = test.get_gpio_direction(gpio=28).value
 
     # Check if Pin direction can be Set
     if (
@@ -82,16 +82,26 @@ def no_failure_when_using_not_existing_pins(test: PicoHostAdapterDio):
     Here there is no FAILURE when using pin out of range AND it stuck the system
     """
     logging.info("No FAILURE when using not existing PINs #4")
+    expected_error_presence = []
+
     test.ping_info()
+    no_expected_error = ""
+
     if (
         test.set_gpio_direction(gpio=50, direction=dio.PinValue.OUTPUT)
         != dio.AnswerType.FAILURE
     ):
-        raise TestFailException("There is not the expacted Failure.")
+        no_expected_error += "set_gpio_direction, "
 
-    if test.get_gpio_direction(gpio=50) != dio.AnswerType.FAILURE:
-        raise TestFailException("There is not the expacted Failure.")
+    if test.get_gpio_direction(gpio=50).type != dio.AnswerType.FAILURE:
+        no_expected_error += "get_gpio_direction, "
+
+    if test.set_gpio_value(gpio=50, value=dio.PinValue.HIGH) != dio.AnswerType.FAILURE:
+        no_expected_error += "set_gpio_value, "
+
     test.ping_info()
+    if no_expected_error != "":
+        raise TestFailException(f"GPIO not set to expected value: {no_expected_error}")
 
 
 @test_launcher
@@ -108,11 +118,11 @@ def fail_to_read_gpio_value(test: PicoHostAdapterDio):
     test.get_gpio_direction(gpio=5)
 
     test.set_gpio_value(gpio=5, value=dio.PinValue.HIGH)
-    if test.get_gpio_value(gpio=4) != dio.PinValue.HIGH:
+    if test.get_gpio_value(gpio=4).value != dio.PinValue.HIGH:
         raise TestFailException("GPIO not set to expected value.")
 
     test.set_gpio_value(gpio=5, value=dio.PinValue.LOW)
-    if test.get_gpio_value(gpio=4) != dio.PinValue.LOW:
+    if test.get_gpio_value(gpio=4).value != dio.PinValue.LOW:
         raise TestFailException("GPIO not set to expected value.")
 
 
@@ -122,7 +132,7 @@ if __name__ == "__main__":
     """Run small test senarios to help in Git issues validation"""
 
     # Setup
-    setup_logging(loggingLevel=logging.INFO)
+    setup_logging(loggingLevel=logging.DEBUG)
     test = PicoHostAdapterDio("COM5")
 
     # Main
