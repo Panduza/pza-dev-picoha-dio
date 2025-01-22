@@ -93,8 +93,8 @@ def test_launcher(func):
 
 def results_md_chart():
     """Display result in chart on markdown format"""
-    report = f'| {"Verdict":10} | {"Description":45} | {"Tests Name":40} | Error |\n'
-    report += f"| {'':-<10} | {'':-<45} | {'':-<40} | ----- |\n"
+    report = f'| {"Verdict":10} | {"Tests Name":40} | {"Description":45} | Error |\n'
+    report += f"| {'':-<10} | {'':-<40} | {'':-<45} | ----- |\n"
     for result in _results:
         report += f'| {result["verdict"]:10} | {result["test"]:40} | {result["description"]:45} | {result.get("error") if result.get("error") else f'{"":5}'} |\n'
     return report
