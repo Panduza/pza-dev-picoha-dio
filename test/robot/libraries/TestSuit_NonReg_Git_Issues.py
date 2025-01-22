@@ -17,7 +17,7 @@ import logging
 
 import api_dio_pb2 as dio
 from launcher_Python_test import *
-from API_PicoHostAdapterDio import PicoHostAdapterDio, setup_logging
+from API_PicoHostAdapterDio import PicoHostAdapterDio
 
 # ========= Test Suite of no regretion =========
 # Check Git Issue
@@ -82,7 +82,6 @@ def no_failure_when_using_not_existing_pins(test: PicoHostAdapterDio):
     Here there is no FAILURE when using pin out of range AND it stuck the system
     """
     logging.info("No FAILURE when using not existing PINs #4")
-    expected_error_presence = []
 
     test.ping_info()
     no_expected_error = ""
@@ -130,6 +129,7 @@ def fail_to_read_gpio_value(test: PicoHostAdapterDio):
 
 if __name__ == "__main__":
     """Run small test senarios to help in Git issues validation"""
+    from API_PicoHostAdapterDio import setup_logging
 
     # Setup
     setup_logging(loggingLevel=logging.DEBUG)

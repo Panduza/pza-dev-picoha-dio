@@ -13,6 +13,7 @@ __date__ = "12 Jan 2025"
 
 import threading
 import functools
+import pydoc
 
 
 # ================== Variables =================
@@ -70,9 +71,10 @@ def timeout_wrapper(timeout=60):
 
 def test_launcher(func):
     """Launch a test and handle its verdict"""
+    ticket_name = pydoc.render_doc(func).splitlines()[3][4:]
 
     def wrapper(*args, **kwargs):
-        test = {"test": func.__name__, "verdict": "ONGOING"}
+        test = {"test": func.__name__, "ticket": ticket_name, "verdict": "ONGOING"}
         try:
             func(*args, **kwargs)
             test.update({"verdict": "PASS"})
@@ -91,18 +93,18 @@ def test_launcher(func):
 
 def results_md_chart():
     """Display result in chart on markdown format"""
-    report = f'| {"Verdict":10} | {"Tests Name":40} | Error |\n'
-    report += f"| {'':-<10} | {'':-<40} | ----- |\n"
+    report = f'| {"Verdict":10} | {"Ticket Name":45} | {"Tests Name":40} | Error |\n'
+    report += f"| {'':-<10} | {'':-<45} | {'':-<40} | ----- |\n"
     for result in _results:
-        report += f'| {result["verdict"]:10} | {result["test"]:40} | {result.get("error") if result.get("error") else f'{"":5}'} |\n'
+        report += f'| {result["verdict"]:10} | {result["ticket"]:45} | {result["test"]:40} | {result.get("error") if result.get("error") else f'{"":5}'} |\n'
     return report
 
 
 def results_csv():
     """Display result in chart on CSV format"""
-    report = "Verdict,Tests_Name,Error\n"
+    report = "Verdict,Ticket_Name,Tests_Name,Error\n"
     for result in _results:
-        report += f'{result["verdict"]},{result["test"]},{result.get("error") if result.get("error") else ""}\n'
+        report += f'{result["verdict"]},{result["ticket"]},{result["test"]},{result.get("error") if result.get("error") else ""}\n'
     return report
 
 
