@@ -1,4 +1,4 @@
 pyserial
-sliplib
+sliplib==0.6.2
 protobuf==5.28.0
 robotframework
