@@ -231,6 +231,24 @@ impl DioRequestProcessor {
         Ok(())
     }
 
+    pub fn is_gpio_pin_available(
+        &mut self, 
+        pin_num: u32, 
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>) -> bool 
+    {
+        if AVAILABLE_GPIO.contains(&pin_num) {
+            true
+        }
+        else{
+            let mut answer = PicohaDioAnswer::default();
+            answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+            answer.error_message = Some("GPIO not available");
+            Self::send_answer(serial, answer);
+            false
+        }
+    }
+
+
     /// Process a request, main entry point
     ///
     pub fn process_request(
@@ -248,51 +266,27 @@ impl DioRequestProcessor {
             femtopb::EnumValue::Known(k) => match k {
                 crate::api_dio::RequestType::Ping => Self::process_request_ping(serial),
                 crate::api_dio::RequestType::SetPinDirection => {
-                    if AVAILABLE_GPIO.contains(&request.pin_num) {
+                    if self.is_gpio_pin_available(request.pin_num as u32, serial) {
                         self.process_request_set_pin_direction(serial, request)
-                    }
-                    else{
-                        let mut answer = PicohaDioAnswer::default();
-                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
-                        answer.error_message = Some("GPIO not available");
-                        Self::send_answer(serial, answer);
                     }
                 }
                 crate::api_dio::RequestType::SetPinValue => {
-                    if AVAILABLE_GPIO.contains(&request.pin_num) {
+                    if self.is_gpio_pin_available(request.pin_num as u32, serial) {
                         self.process_request_set_pin_value(serial, request)
-                    }
-                    else{
-                        let mut answer = PicohaDioAnswer::default();
-                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
-                        answer.error_message = Some("GPIO not available");
-                        Self::send_answer(serial, answer);
                     }
                 }
                 crate::api_dio::RequestType::GetPinDirection => {
-                    if AVAILABLE_GPIO.contains(&request.pin_num) {
+                    if self.is_gpio_pin_available(request.pin_num as u32, serial) {
                         self.process_request_get_pin_direction(serial, request)
-                    }
-                    else{
-                        let mut answer = PicohaDioAnswer::default();
-                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
-                        answer.error_message = Some("GPIO not available");
-                        Self::send_answer(serial, answer);
                     }
                 }
                 crate::api_dio::RequestType::GetPinValue => {
-                    if AVAILABLE_GPIO.contains(&request.pin_num) {
+                    if self.is_gpio_pin_available(request.pin_num as u32, serial) {
                         self.process_request_get_pin_value(serial, request)
-                    }
-                    else{
-                        let mut answer = PicohaDioAnswer::default();
-                        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
-                        answer.error_message = Some("GPIO not available");
-                        Self::send_answer(serial, answer);
                     }
                 }
             },
-            // Error when Unknown commend
+            // Error when Unknown command
             femtopb::EnumValue::Unknown(_) => todo!(),
         }
     }
@@ -394,8 +388,8 @@ impl DioRequestProcessor {
                 match direction {
                     PinDirection::input => {
                         print_debug_message!(b"      * input\r\n");
-                                answer.value =
-                                    Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
+                        answer.value =
+                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
                     }
                     PinDirection::output => {
                         print_debug_message!(b"      * output\r\n");
