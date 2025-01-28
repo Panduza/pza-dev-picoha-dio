@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Test Suite of no regretion
-Describe small test senarios to help validation of Git issues 
+Test Suite of no regression
+Describe small test scenarios to help validation of Git issues 
 """
 
 import __future__
@@ -11,7 +11,7 @@ __date__ = "12 Jan 2025"
 
 # ================== Imports ===================
 
-import logging, sys, os
+import logging, os, sys
 import pytest
 
 # local imports
@@ -22,8 +22,8 @@ import api_dio_pb2 as dio
 from launcher_Python_test import setup_test, timeout_wrapper
 from API_PicoHostAdapterDio import PicoHostAdapterDio
 
-# ========= Test Suite of no regretion =========
-# Check Git Issu
+# ========= Test Suite of no regression =========
+# Check Git Issue
 
 
 @setup_test
@@ -37,7 +37,7 @@ def test_impossible_to_reset_pins(test: PicoHostAdapterDio):
     test.ping_info()
 
     test.set_gpio_direction(gpio=2, direction=dio.PinValue.OUTPUT)
-    test.get_gpio_direction(gpio=2)
+    assert test.get_gpio_direction(gpio=2)
 
     test.set_gpio_direction(gpio=2, direction=dio.PinValue.INPUT)
     assert test.get_gpio_direction(gpio=2).value == dio.PinValue.INPUT
@@ -120,12 +120,12 @@ def test_fail_to_read_gpio_value(test: PicoHostAdapterDio):
 # ============= Main Fonctions =================
 
 if __name__ == "__main__":
-    """Run small test senarios to help in Git issues validation"""
+    """Run small test scenarios to help in Git issues validation"""
     pytest.main(
         args=[
             "--capture=no",
             "--verbose",
-            "--log-cli-level=DEBUG",
+            "--log-level=DEBUG",
             os.path.abspath(__file__),
         ]
     )

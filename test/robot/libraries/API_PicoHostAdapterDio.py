@@ -74,7 +74,7 @@ class PicoHostAdapterDio:
         request_type: dio.RequestType,
         pin_num: int = None,
         pin_value: dio.PinValue = None,
-    ) -> bool:
+    ):
         """Send commend by serial COM"""
         picoha_dio_request = dio.PicohaDioRequest()
         picoha_dio_request.type = request_type
@@ -98,7 +98,7 @@ class PicoHostAdapterDio:
             logging.error(f"Request Error: {err}")
             raise PicoHostAdapterDio(err)
 
-    def __picoha_dio_answer(self):
+    def __picoha_dio_answer(self) -> dio.PicohaDioAnswer:
         """Wait answer on serial COM"""
         try:
             # Read data out of the buffer until a carraige return / new line is found
@@ -122,7 +122,7 @@ class PicoHostAdapterDio:
         """Check if the serial port is open"""
         return self.__serialPort.is_open
 
-    def ping_info(self):
+    def ping_info(self) -> dio.PicohaDioAnswer:
         """
         Get ping info
         return :
@@ -131,7 +131,9 @@ class PicoHostAdapterDio:
         self.__picoha_dio_request(dio.RequestType.PING)
         return self.__picoha_dio_answer().type
 
-    def set_gpio_direction(self, gpio: int, direction: dio.PinValue) -> int:
+    def set_gpio_direction(
+        self, gpio: int, direction: dio.PinValue
+    ) -> dio.PicohaDioAnswer:
         """
         Set direction of pin in INPUT/OUTPUT
         return :
@@ -140,7 +142,7 @@ class PicoHostAdapterDio:
         self.__picoha_dio_request(dio.RequestType.SET_PIN_DIRECTION, gpio, direction)
         return self.__picoha_dio_answer().type
 
-    def set_gpio_value(self, gpio: int, value: dio.PinValue) -> int:
+    def set_gpio_value(self, gpio: int, value: dio.PinValue) -> dio.PicohaDioAnswer:
         """
         Set value of gpio as HIGH/LOW
         return :
@@ -149,7 +151,7 @@ class PicoHostAdapterDio:
         self.__picoha_dio_request(dio.RequestType.SET_PIN_VALUE, gpio, value)
         return self.__picoha_dio_answer().type
 
-    def get_gpio_direction(self, gpio: int):
+    def get_gpio_direction(self, gpio: int) -> dio.PicohaDioAnswer:
         """
         Get direction of gpio in INPUT/OUTPUT
         return :
@@ -159,7 +161,7 @@ class PicoHostAdapterDio:
         self.__picoha_dio_request(dio.RequestType.GET_PIN_DIRECTION, gpio)
         return self.__picoha_dio_answer()
 
-    def get_gpio_value(self, gpio: int):
+    def get_gpio_value(self, gpio: int) -> dio.PicohaDioAnswer:
         """
         Get value of gpio as HIGH/LOW
         return :

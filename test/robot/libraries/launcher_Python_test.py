@@ -11,10 +11,12 @@ __date__ = "12 Jan 2025"
 
 # ================== Imports ===================
 
+import os
 import threading
 import functools
 import pydoc
 import logging
+from configparser import ConfigParser
 
 # Local imports
 from API_PicoHostAdapterDio import PicoHostAdapterDio
@@ -22,7 +24,15 @@ from API_PicoHostAdapterDio import PicoHostAdapterDio
 # ================== Variables =================
 
 _results = []
-_DUT = "COM5"
+
+_init_file = os.path.join(os.path.dirname(__file__), "config_file.ini")
+if os.path.exists(_init_file):
+    logging.info(f"Load config from :{_init_file}")
+    config = ConfigParser()
+    config.read(_init_file)
+    _PORT_COM_DUT = config.get("General", "PortCOM")
+else:
+    logging.error(f"we didn't found: {_init_file}.")
 
 # ================== Class =====================
 
@@ -32,16 +42,12 @@ class TimeoutException(Exception):
     pass
 
 
-class TestFailException(Exception):
-    pass
-
-
 # ================== Decorator =================
 
 
 def timeout_wrapper(timeout=60):
     """
-    Launch a fonction and break it on timeout.
+    Launch a function and break it on timeout.
     Default timeout: 60 sec.
     """
 
@@ -96,7 +102,7 @@ def setup_test(func):
     """Launch a test and handle its verdict"""
 
     def wrapper(*args, **kwargs):
-        test = PicoHostAdapterDio(_DUT)
+        test = PicoHostAdapterDio(_PORT_COM_DUT)
         func(test, *args, **kwargs)
         test.__del__()
 

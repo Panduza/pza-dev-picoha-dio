@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """This file link RobotFramework Keywords we python API"""
-import logging
+import logging, os
+from configparser import ConfigParser
 
 # local imports
 import api_dio_pb2 as dio
@@ -16,26 +17,38 @@ def test_that_nothing_is_good_too():
 
 
 # ==============================================
-test = None
+_test = None
 
 
-def connect_to(COM: str = "COM4"):
-    """Connect on Serial Port: COM"""
-    global test
+def connect_to_dut():
+    """Connect on Serial Port COM"""
+    global _test
+
+    _init_file = os.path.join(os.path.dirname(__file__), "config_file.ini")
+    if os.path.exists(_init_file):
+        logging.info(f"Load config from :{_init_file}")
+        config = ConfigParser()
+        config.read(_init_file)
+        port_com_dut = config.get("General", "PortCOM")
+    else:
+        logging.error(f"we didn't found: {_init_file}.")
+
     try:
-        if test:
-            test.__del__()
-        test = PicoHostAdapterDio(COM)
+        if _test:
+            _test.__del__()
+        _test = PicoHostAdapterDio(port_com_dut)
     except SyntaxError as err:
         raise SyntaxError(f"{err}")
     except:
-        raise Exception(f"Imposible to create object PicoHost Adapter Dio on {COM}")
+        raise Exception(
+            f"Imposible to create object PicoHost Adapter Dio on {port_com_dut}"
+        )
 
 
 def disconnect():
     """Closed Serial Port connection"""
     try:
-        test.__del__()
+        _test.__del__()
     except SyntaxError as err:
         raise SyntaxError(f"{err}")
     except:
@@ -45,14 +58,14 @@ def disconnect():
 def is_connected():
     """Check connection on Serial Port"""
     try:
-        return "true" if test.is_connected() else "false"
+        return "true" if _test.is_connected() else "false"
     except:
         raise Exception("Fail to connect product.")
 
 
 def ping():
     """Send Ping frame"""
-    ping_info = test.ping_info()
+    ping_info = _test.ping_info()
     if ping_info != dio.AnswerType.SUCCESS:
         raise ValueError("Not able to get a PING answer.")
 
@@ -60,9 +73,9 @@ def ping():
 def set_gpio_direction(gpio: int, direction: dio.PinValue):
     """Set GPIO direction"""
     if direction == "INPUT":
-        err = test.set_gpio_direction(gpio, dio.PinValue.INPUT)
+        err = _test.set_gpio_direction(gpio, dio.PinValue.INPUT)
     elif direction == "OUTPUT":
-        err = test.set_gpio_direction(gpio, dio.PinValue.OUTPUT)
+        err = _test.set_gpio_direction(gpio, dio.PinValue.OUTPUT)
     else:
         raise ValueError(f"This is not Direction value : {direction}")
     if err == dio.AnswerType.SUCCESS:
@@ -74,7 +87,7 @@ def set_gpio_direction(gpio: int, direction: dio.PinValue):
 
 def get_gpio_direction(gpio: int):
     """Return the GPIO direction"""
-    direction = test.get_gpio_direction(gpio).value
+    direction = _test.get_gpio_direction(gpio).value
     if direction == dio.PinValue.INPUT:
         return "INPUT"
     elif direction == dio.PinValue.OUTPUT:
@@ -85,7 +98,7 @@ def get_gpio_direction(gpio: int):
 
 def set_gpio_value(gpio: int, value):
     """Set GPIO direction"""
-    if test.set_gpio_value(gpio, value) == dio.AnswerType.SUCCESS:
+    if _test.set_gpio_value(gpio, value) == dio.AnswerType.SUCCESS:
         return "SUCCESS"
     else:
         logging.warning(f"FAIL to set gpio value")
@@ -94,7 +107,7 @@ def set_gpio_value(gpio: int, value):
 
 def get_gpio_value(gpio: int):
     """Return GPIO direction"""
-    value = test.get_gpio_value(gpio).value
+    value = _test.get_gpio_value(gpio).value
     if value == dio.PinValue.LOW:
         return "LOW"
     elif value == dio.PinValue.HIGH:

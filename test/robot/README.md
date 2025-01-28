@@ -104,4 +104,4 @@ cd ./tests
 robot Test_Suite_GPIO.robot
 ```
 
-Note: Check communication port number on your device management and put it on [platform.resource](./platform/RaspberryPico/platform.resource)
+Note: Check communication port number on your device management and put it on [config_file.ini](./libraries/config_file.ini)

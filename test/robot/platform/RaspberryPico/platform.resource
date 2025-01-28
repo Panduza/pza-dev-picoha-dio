@@ -12,14 +12,13 @@ Library     platform_data.py
 
 *** Variables ***
 ${Status_Last_CMD} =    None
-${COM} =     COM5
 
 *** Keywords ***
 
 Main Test Platform Setup
     [Documentation]    Prepare testing environement
     Set Log Level    TRACE
-    Connect to    ${COM} 
+    Connect To Dut
     Log     "RaspberryPico Setup"
 
 Main Test Platform Cleanup

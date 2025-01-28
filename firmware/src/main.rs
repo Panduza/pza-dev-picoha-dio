@@ -18,13 +18,15 @@ use uart_debug::uart_debug_print;
 use crate::api_dio::PicohaDioRequest;
 // application logic
 mod api_dio_utils;
-mod dio_request_processor;
 
+mod dio_request_processor;
 use dio_request_processor::DioRequestProcessor;
+use dio_request_processor::MAX_PINS;
 
 use bsp::entry;
 use femtopb::Message;
 mod api_dio;
+
 
 // Used to demonstrate writing formatted strings
 #[cfg(any(feature = "uart0_debug"))]
@@ -220,7 +222,6 @@ unsafe fn main() -> ! {
         .build();
 
     // --------------------------------------------------------------
-    const MAX_PINS: usize = 29;
     let mut pins_id: [Option<DynPinId>; MAX_PINS] = [
         None, // 0 debug uart
         None, // 1 debug uart
