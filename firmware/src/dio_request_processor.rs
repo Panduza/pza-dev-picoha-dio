@@ -18,6 +18,7 @@ use rp2040_hal::gpio::DynPinId;
 use usbd_serial::SerialPort;
 
 const MAX_PINS: usize = 23;
+const AVAILABLE_GPIO: &[u32] = &[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,26,27,28];
 
 type PinO = rp2040_hal::gpio::Pin<
     rp2040_hal::gpio::DynPinId,
@@ -230,6 +231,24 @@ impl DioRequestProcessor {
         Ok(())
     }
 
+    pub fn is_gpio_pin_available(
+        &mut self, 
+        pin_num: u32, 
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>) -> bool 
+    {
+        if AVAILABLE_GPIO.contains(&pin_num) {
+            true
+        }
+        else{
+            let mut answer = PicohaDioAnswer::default();
+            answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+            answer.error_message = Some("GPIO not available");
+            Self::send_answer(serial, answer);
+            false
+        }
+    }
+
+
     /// Process a request, main entry point
     ///
     pub fn process_request(
@@ -247,18 +266,27 @@ impl DioRequestProcessor {
             femtopb::EnumValue::Known(k) => match k {
                 crate::api_dio::RequestType::Ping => Self::process_request_ping(serial),
                 crate::api_dio::RequestType::SetPinDirection => {
-                    self.process_request_set_pin_direction(serial, request)
+                    if self.is_gpio_pin_available(request.pin_num as u32, serial) {
+                        self.process_request_set_pin_direction(serial, request)
+                    }
                 }
                 crate::api_dio::RequestType::SetPinValue => {
-                    self.process_request_set_pin_value(serial, request)
+                    if self.is_gpio_pin_available(request.pin_num as u32, serial) {
+                        self.process_request_set_pin_value(serial, request)
+                    }
                 }
                 crate::api_dio::RequestType::GetPinDirection => {
-                    self.process_request_get_pin_direction(serial, request)
+                    if self.is_gpio_pin_available(request.pin_num as u32, serial) {
+                        self.process_request_get_pin_direction(serial, request)
+                    }
                 }
                 crate::api_dio::RequestType::GetPinValue => {
-                    self.process_request_get_pin_value(serial, request)
+                    if self.is_gpio_pin_available(request.pin_num as u32, serial) {
+                        self.process_request_get_pin_value(serial, request)
+                    }
                 }
             },
+            // Error when Unknown command
             femtopb::EnumValue::Unknown(_) => todo!(),
         }
     }
@@ -434,7 +462,7 @@ impl DioRequestProcessor {
 
         // Prepare encoding
         let mut encoded_command = [0u8; 1024];
-        let mut slip_encoder = serial_line_ip::Encoder::new();
+        let mut slip_encoder = serial_line_ip::Encoder::new(); 
 
         // Encode the command
         let mut totals = match slip_encoder.encode(&buffer[..encoded_len], &mut encoded_command) {
