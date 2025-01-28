@@ -14,12 +14,15 @@ __date__ = "12 Jan 2025"
 import threading
 import functools
 import pydoc
+import logging
 
+# Local imports
+from API_PicoHostAdapterDio import PicoHostAdapterDio
 
 # ================== Variables =================
 
 _results = []
-
+_DUT = "COM5"
 
 # ================== Class =====================
 
@@ -57,6 +60,7 @@ def timeout_wrapper(timeout=60):
             thread.start()
             thread.join(timeout)
             if thread.is_alive():
+                logging.DEBUG(f"{func.__name__} timed out after {timeout} seconds")
                 raise TimeoutException(
                     f"{func.__name__} timed out after {timeout} seconds"
                 )
@@ -88,15 +92,30 @@ def test_launcher(func):
     return wrapper
 
 
+def setup_test(func):
+    """Launch a test and handle its verdict"""
+
+    def wrapper(*args, **kwargs):
+        test = PicoHostAdapterDio(_DUT)
+        func(test, *args, **kwargs)
+        test.__del__()
+
+    return wrapper
+
+
 # ============ Utilities Fonctions =============
 
 
 def results_md_chart():
     """Display result in chart on markdown format"""
-    report = f'| {"Verdict":10} | {"Tests Name":40} | {"Description":45} | Error |\n'
-    report += f"| {'':-<10} | {'':-<40} | {'':-<45} | ----- |\n"
+    len_clo_0, len_clo_1, len_clo_2, len_clo_3 = 10, 45, 45, 5
+    report = f'| {"Verdict":{len_clo_0}} | {"Tests Name":{len_clo_1}} | {"Description":{len_clo_2}} | Error |\n'
+    report += f"| {'':-<{len_clo_0}} | {'':-<{len_clo_1}} | {'':-<{len_clo_2}} | {'':-<{len_clo_3}} |\n"
     for result in _results:
-        report += f'| {result["verdict"]:10} | {result["test"]:40} | {result["description"]:45} | {result.get("error") if result.get("error") else f'{"":5}'} |\n'
+        report += (
+            f'| {result["verdict"]:{len_clo_0}} | {result["test"]:{len_clo_1}} | {result["description"]:{len_clo_2}} | '
+            + f'{result.get("error") if result.get("error") else f'{"":{len_clo_3}}'} |\n'
+        )
     return report
 
 

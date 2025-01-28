@@ -1,10 +1,27 @@
 {
-    "robot.pythonpath": [
-        "${workspaceFolder}/libraries",
-        "${workspaceFolder}/platform/RaberryPico"
-    ],
+    // Robot Frameworke
     "robotcode.robot.pythonPath": [
         "${workspaceFolder}/libraries",
         "${workspaceFolder}/platform/RaberryPico"
+    ],
+    // Python test
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/libraries",
+        "${workspaceFolder}/platform/RaberryPico"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+        "${workspaceFolder}/tests",
+        "--verbose",
+        "--capture=no",
+        "--log-date-format='%Y-%m-%d %H:%M:%S'",
+        // Print logs in terminal config
+        "--log-cli-level=INFO",
+        "--log-cli-format='%(levelname)s %(message)s'",
+        // Save logs in file config
+        "--log-file=pytest.log",
+        "--log-file-level=DEBUG",
+        "--log-file-format='%(asctime)s %(levelname)s %(message)s'"
     ]
 }
