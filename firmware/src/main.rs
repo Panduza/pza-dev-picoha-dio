@@ -53,12 +53,7 @@ use rp_pico as bsp;
 #[cfg(any(feature = "uart0_debug"))]
 use bsp::hal::clocks::Clock;
 
-use bsp::hal::{
-    clocks::{init_clocks_and_plls},
-    pac,
-    sio::Sio,
-    watchdog::Watchdog,
-};
+use bsp::hal::{clocks::init_clocks_and_plls, pac, sio::Sio, watchdog::Watchdog};
 
 use serial_line_ip;
 

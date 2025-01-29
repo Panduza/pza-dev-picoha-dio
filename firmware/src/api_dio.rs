@@ -20,17 +20,7 @@ pub struct PicohaDioAnswer<'a> {
     #[femtopb(unknown_fields)]
     pub unknown_fields: femtopb::UnknownFields<'a>,
 }
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    PartialOrd,
-    Ord,
-    ::femtopb::Enumeration
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::femtopb::Enumeration)]
 #[repr(i32)]
 #[derive(Default)]
 pub enum RequestType {
@@ -71,17 +61,7 @@ impl RequestType {
 }
 /// This structure should be splitted
 /// 1 for values and 1 for directions
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    PartialOrd,
-    Ord,
-    ::femtopb::Enumeration
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::femtopb::Enumeration)]
 #[repr(i32)]
 #[derive(Default)]
 pub enum PinValue {
@@ -117,17 +97,7 @@ impl PinValue {
         }
     }
 }
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    PartialOrd,
-    Ord,
-    ::femtopb::Enumeration
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::femtopb::Enumeration)]
 #[repr(i32)]
 #[derive(Default)]
 pub enum AnswerType {

@@ -40,8 +40,8 @@ pub fn uart_debug_init(uart: UartType) {
 pub fn uart_debug_print(data: &[u8]) {
     unsafe {
         if let Some(uart) = DEBUG_UART.as_ref() {
-	    uart.write_full_blocking(data);
-	}
+            uart.write_full_blocking(data);
+        }
     }
 }
 
@@ -49,8 +49,14 @@ pub fn uart_debug_print(data: &[u8]) {
 #[cfg(not(any(feature = "uart0_debug")))]
 macro_rules! print_debug_message {
     ($fmt:expr) => {{}};
-    ($fmt:expr, $arg0:expr) => {{let _ = ($arg0); ()}};
-    ($fmt:expr, $arg0:expr, $arg1:expr) => {{let _ = ($arg0, $arg1); ()}};
+    ($fmt:expr, $arg0:expr) => {{
+        let _ = ($arg0);
+        ()
+    }};
+    ($fmt:expr, $arg0:expr, $arg1:expr) => {{
+        let _ = ($arg0, $arg1);
+        ()
+    }};
 }
 
 #[macro_export]
