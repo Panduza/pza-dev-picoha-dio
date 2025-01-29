@@ -11,12 +11,19 @@ __date__ = "12 Jan 2025"
 
 # ================== Imports ===================
 
-import logging, os, sys
+import logging, os
 import pytest
 
 # local imports
 # TODO : Remove this ASAP
+import sys
+
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), "libraries"))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "platform", "RaspberryPico"
+    )
+)
 
 import api_dio_pb2 as dio
 from launcher_Python_test import setup_test, timeout_wrapper

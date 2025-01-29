@@ -71,6 +71,12 @@ By the way, if your are not using python on some other project... Go see https:/
 
 ## SETUP
 
+### Advice
+
+To avoid future conflicts in import modules, we recommend creating a Virtual Environment: Venv.
+
+To do so in VS Code, follow documentation [here](https://code.visualstudio.com/docs/python/environments#_creating-environments).
+
 ### Prerequisites
 
 In order to use this systeme you shall install few module python : [PROTOBUF](https://protobuf.dev/) and [SLIP](https://sliplib.readthedocs.io/en/develop/module.html#module-sliplib.slip).
@@ -104,4 +110,4 @@ cd ./tests
 robot Test_Suite_GPIO.robot
 ```
 
-Note: Check communication port number on your device management and put it on [config_file.ini](./libraries/config_file.ini)
+Note: Check communication port number on your device management and put it on [config_file.ini](./platform/RaspberryPico/config_file.ini)

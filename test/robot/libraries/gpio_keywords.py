@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """This file link RobotFramework Keywords we python API"""
-import logging, os
-from configparser import ConfigParser
+import logging
 
 # local imports
 import api_dio_pb2 as dio
@@ -20,19 +19,9 @@ def test_that_nothing_is_good_too():
 _test = None
 
 
-def connect_to_dut():
+def connect_to_dut(port_com_dut: str):
     """Connect on Serial Port COM"""
     global _test
-
-    _init_file = os.path.join(os.path.dirname(__file__), "config_file.ini")
-    if os.path.exists(_init_file):
-        logging.info(f"Load config from :{_init_file}")
-        config = ConfigParser()
-        config.read(_init_file)
-        port_com_dut = config.get("General", "PortCOM")
-    else:
-        logging.error(f"we didn't found: {_init_file}.")
-
     try:
         if _test:
             _test.__del__()

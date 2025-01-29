@@ -1,34 +1,20 @@
 """
 This file describe Rasberry Pico
-
-# Raspberry Pico testing Setup
-To simplified the validation process 
-            ┌──────┐--┌──────┐
-  ── GPIO0  | 1    └──┘   40 |  VBUS   
-  ── GPIO1  | 2    USB    39 |  VSYS    
-       GND  | 3           38 |  GND    
- ┌─  GPIO2  | 4           37 |  3V3_EN
- └─  GPIO3  | 5           36 |  3V3   
- ┌─  GPIO4  | 6           35 |         
- └─  GPIO5  | 7           34 |  GPIO28  ─┐
-       GND  | 8   ┌    ┐  33 |  GND      |
- ┌─  GPIO6  | 9    PICO   32 |  GPIO27  ─┘
- └─  GPIO7  | 10  └    ┘  31 |  GPIO26  ─┐
- ┌─  GPIO8  | 11          30 |  Run      | 
- └─  GPIO9  | 12          29 |  GPIO22  ─┘
-       GND  | 13          28 |  GND    
- ┌─ GPIO10  | 14          27 |  GPIO21  ─┐
- └─ GPIO11  | 15          26 |  GPIO20  ─┘
- ┌─ GPIO12  | 16          25 |  GPIO19  ─┐
- └─ GPIO13  | 17          24 |  GPIO18  ─┘
-       GND  | 18          23 |  GND    
- ┌─ GPIO14  | 19          22 |  GPIO17  ─┐
- └─ GPIO15  | 20   DEBUG  21 |  GPIO16  ─┘
-            └───────┴┴┴──────┘
-
 """
 
-import logging
+import logging, os
+from configparser import ConfigParser
+
+
+_init_file = os.path.join(os.path.dirname(__file__), "config_file.ini")
+PORT_COM_DUT: str = ""
+if os.path.exists(_init_file):
+    logging.info(f"Load config from :{_init_file}")
+    _config = ConfigParser()
+    _config.read(_init_file)
+    PORT_COM_DUT = _config.get("General", "PortCOM")
+else:
+    logging.error(f"we didn't found: {_init_file}.")
 
 BUILTIN_LED = 25
 GPIO_UART = [0, 1]
@@ -61,7 +47,35 @@ GPIO_USABLE = [
 
 
 def get_comp_gpio(gpio: int):
-    """get paired GPIO"""
+    """
+       Get paired GPIO
+
+       # Raspberry Pico testing Setup
+       To simplified the validation process GPIO are connecte in paire.
+               ┌──────┐--┌──────┐
+     ── GPIO0  | 1    └──┘   40 |  VBUS
+     ── GPIO1  | 2    USB    39 |  VSYS
+          GND  | 3           38 |  GND
+    ┌─  GPIO2  | 4           37 |  3V3_EN
+    └─  GPIO3  | 5           36 |  3V3
+    ┌─  GPIO4  | 6           35 |
+    └─  GPIO5  | 7           34 |  GPIO28  ─┐
+          GND  | 8   ┌    ┐  33 |  GND      |
+    ┌─  GPIO6  | 9    PICO   32 |  GPIO27  ─┘
+    └─  GPIO7  | 10  └    ┘  31 |  GPIO26  ─┐
+    ┌─  GPIO8  | 11          30 |  Run      |
+    └─  GPIO9  | 12          29 |  GPIO22  ─┘
+          GND  | 13          28 |  GND
+    ┌─ GPIO10  | 14          27 |  GPIO21  ─┐
+    └─ GPIO11  | 15          26 |  GPIO20  ─┘
+    ┌─ GPIO12  | 16          25 |  GPIO19  ─┐
+    └─ GPIO13  | 17          24 |  GPIO18  ─┘
+          GND  | 18          23 |  GND
+    ┌─ GPIO14  | 19          22 |  GPIO17  ─┐
+    └─ GPIO15  | 20   DEBUG  21 |  GPIO16  ─┘
+               └───────┴┴┴──────┘
+
+    """
     if gpio not in GPIO_USABLE:
         logging.warning("This gpio is not usable on this Setup.")
         return "FAILURE"

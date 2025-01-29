@@ -18,7 +18,7 @@ ${Status_Last_CMD} =    None
 Main Test Platform Setup
     [Documentation]    Prepare testing environement
     Set Log Level    TRACE
-    Connect To Dut
+    Connect To Dut    ${PORT_COM_DUT}
     Log     "RaspberryPico Setup"
 
 Main Test Platform Cleanup

@@ -11,28 +11,18 @@ __date__ = "12 Jan 2025"
 
 # ================== Imports ===================
 
-import os
 import threading
 import functools
 import pydoc
 import logging
-from configparser import ConfigParser
 
 # Local imports
+from platform_data import PORT_COM_DUT
 from API_PicoHostAdapterDio import PicoHostAdapterDio
 
 # ================== Variables =================
 
 _results = []
-
-_init_file = os.path.join(os.path.dirname(__file__), "config_file.ini")
-if os.path.exists(_init_file):
-    logging.info(f"Load config from :{_init_file}")
-    config = ConfigParser()
-    config.read(_init_file)
-    _PORT_COM_DUT = config.get("General", "PortCOM")
-else:
-    logging.error(f"we didn't found: {_init_file}.")
 
 # ================== Class =====================
 
@@ -102,7 +92,7 @@ def setup_test(func):
     """Launch a test and handle its verdict"""
 
     def wrapper(*args, **kwargs):
-        test = PicoHostAdapterDio(_PORT_COM_DUT)
+        test = PicoHostAdapterDio(PORT_COM_DUT)
         func(test, *args, **kwargs)
         test.__del__()
 
