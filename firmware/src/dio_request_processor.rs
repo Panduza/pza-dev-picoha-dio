@@ -1,11 +1,11 @@
 // Print debug support
-use crate::api_dio_utils;
 #[cfg(any(feature = "uart0_debug"))]
 use crate::uart_debug::uart_debug_print;
 use crate::{
     api_dio::{PicohaDioAnswer, PicohaDioRequest},
     print_debug_message,
 };
+#[cfg(any(feature = "uart0_debug"))]
 use core::fmt::Write;
 
 use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
@@ -33,12 +33,12 @@ type PinI = rp2040_hal::gpio::Pin<
 const PINI_NONE: Option<PinI> = None;
 
 enum PinDirection {
-    input,
-    output,
+    Input,
+    Output,
 }
 enum PinValue {
-    low,
-    high,
+    Low,
+    High,
 }
 
 /// Application Digital I/O
@@ -76,12 +76,12 @@ impl DioRequestProcessor {
 
         // if pin is in the output array, it is configured as output
         if self.pins_o[pin].is_some() {
-            return Some(PinDirection::output);
+            return Some(PinDirection::Output);
         }
 
         // if pin is in the input array, it is configured as input
         if self.pins_i[pin].is_some() {
-            return Some(PinDirection::input);
+            return Some(PinDirection::Input);
         }
 
         // else not configured yet
@@ -98,23 +98,23 @@ impl DioRequestProcessor {
         let dir = self.get_internal_pin_direction(pin);
         match dir {
             Some(d) => match d {
-                PinDirection::input => {
+                PinDirection::Input => {
                     let pin_obj = &mut self.pins_i[pin];
                     if let Some(pin_obj) = pin_obj {
                         match pin_obj.is_high() {
-                            Ok(true) => return Some(PinValue::high),
-                            Ok(false) => return Some(PinValue::low),
+                            Ok(true) => return Some(PinValue::High),
+                            Ok(false) => return Some(PinValue::Low),
                             Err(_) => {} // Infalible
                         }
                     }
                 }
-                PinDirection::output => {
+                PinDirection::Output => {
                     print_debug_message!(b"      * output ?\r\n");
                     let pin_obj = &mut self.pins_o[pin];
                     if let Some(pin_obj) = pin_obj {
                         match pin_obj.is_set_high() {
-                            Ok(true) => return Some(PinValue::high),
-                            Ok(false) => return Some(PinValue::low),
+                            Ok(true) => return Some(PinValue::High),
+                            Ok(false) => return Some(PinValue::Low),
                             Err(_) => {} // Infalible
                         }
                     }
@@ -358,12 +358,12 @@ impl DioRequestProcessor {
             Some(direction) => {
                 answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
                 match direction {
-                    PinDirection::input => {
+                    PinDirection::Input => {
                         print_debug_message!(b"      * input\r\n");
                         answer.value =
                             Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
                     }
-                    PinDirection::output => {
+                    PinDirection::Output => {
                         print_debug_message!(b"      * output\r\n");
                         answer.value =
                             Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
@@ -399,12 +399,12 @@ impl DioRequestProcessor {
             Some(val) => {
                 answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
                 match val {
-                    PinValue::low => {
+                    PinValue::Low => {
                         print_debug_message!(b"      * low\r\n");
                         answer.value =
                             Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Low));
                     }
-                    PinValue::high => {
+                    PinValue::High => {
                         print_debug_message!(b"      * high\r\n");
                         answer.value =
                             Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::High));

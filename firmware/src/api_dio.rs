@@ -46,6 +46,7 @@ impl RequestType {
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    #[allow(dead_code)]
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Ping => "PING",
@@ -56,6 +57,7 @@ impl RequestType {
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
+    #[allow(dead_code)]
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "PING" => Some(Self::Ping),
@@ -94,6 +96,7 @@ impl PinValue {
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    #[allow(dead_code)]
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Low => "LOW",
@@ -103,6 +106,7 @@ impl PinValue {
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
+    #[allow(dead_code)]
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "LOW" => Some(Self::Low),
@@ -136,6 +140,7 @@ impl AnswerType {
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    #[allow(dead_code)]
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Success => "SUCCESS",
@@ -143,6 +148,7 @@ impl AnswerType {
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
+    #[allow(dead_code)]
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "SUCCESS" => Some(Self::Success),

@@ -6,9 +6,7 @@
 
 // uart debug
 mod uart_debug;
-use embedded_hal::digital::OutputPin;
 use rp2040_hal::gpio::DynPinId;
-use rp2040_hal::gpio::OutputDriveStrength;
 // use rp2040_hal::gpio::new_pin;
 #[cfg(any(feature = "uart0_debug"))]
 use uart_debug::uart_debug_init;
@@ -52,14 +50,15 @@ use rp_pico::hal;
 use rp_pico as bsp;
 // use sparkfun_pro_micro_rp2040 as bsp;
 
+#[cfg(any(feature = "uart0_debug"))]
+use bsp::hal::clocks::Clock;
+
 use bsp::hal::{
-    clocks::{init_clocks_and_plls, Clock},
+    clocks::{init_clocks_and_plls},
     pac,
     sio::Sio,
     watchdog::Watchdog,
 };
-
-use rp_pico::hal::gpio::{FunctionPio0, Pin};
 
 use serial_line_ip;
 
@@ -92,7 +91,7 @@ fn format_id(id: &[u8], buf: &mut [u8]) -> usize {
 unsafe fn main() -> ! {
     // info!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
+    let _core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let sio = Sio::new(pac.SIO);
 
@@ -221,7 +220,8 @@ unsafe fn main() -> ! {
 
     // --------------------------------------------------------------
 
-    let mut pins_id: [Option<DynPinId>; 23] = [
+    #[cfg(any(feature = "uart0_debug"))]
+    let pins_id: [Option<DynPinId>; 23] = [
         None, // 0 debug uart
         None, // 1 debug uart
         Some(pins.gpio2.into_dyn_pin().id()),
@@ -254,10 +254,38 @@ unsafe fn main() -> ! {
         // None,
     ];
     #[cfg(not(any(feature = "uart0_debug")))]
-    {
-        pins_id[0] = Some(pins.gpio0.into_dyn_pin().id()); // 0 debug uart
-        pins_id[1] = Some(pins.gpio1.into_dyn_pin().id());
-    }
+    let pins_id: [Option<DynPinId>; 23] = [
+        Some(pins.gpio0.into_dyn_pin().id()),
+        Some(pins.gpio1.into_dyn_pin().id()),
+        Some(pins.gpio2.into_dyn_pin().id()),
+        Some(pins.gpio3.into_dyn_pin().id()),
+        Some(pins.gpio4.into_dyn_pin().id()),
+        Some(pins.gpio5.into_dyn_pin().id()),
+        Some(pins.gpio6.into_dyn_pin().id()),
+        Some(pins.gpio7.into_dyn_pin().id()),
+        Some(pins.gpio8.into_dyn_pin().id()),
+        Some(pins.gpio9.into_dyn_pin().id()),
+        Some(pins.gpio10.into_dyn_pin().id()),
+        Some(pins.gpio11.into_dyn_pin().id()),
+        Some(pins.gpio12.into_dyn_pin().id()),
+        Some(pins.gpio13.into_dyn_pin().id()),
+        Some(pins.gpio14.into_dyn_pin().id()),
+        Some(pins.gpio15.into_dyn_pin().id()),
+        Some(pins.gpio16.into_dyn_pin().id()),
+        Some(pins.gpio17.into_dyn_pin().id()),
+        Some(pins.gpio18.into_dyn_pin().id()),
+        Some(pins.gpio19.into_dyn_pin().id()),
+        Some(pins.gpio20.into_dyn_pin().id()),
+        Some(pins.gpio21.into_dyn_pin().id()),
+        Some(pins.gpio22.into_dyn_pin().id()),
+        // None, // 23
+        // None, // 24
+        // None, // 25 led
+        // None, // 26
+        // None, // 27
+        // None,
+        // None,
+    ];
 
     // let mut request_buffer = DioRequestBuffer::new();
     let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =
