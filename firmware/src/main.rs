@@ -154,7 +154,7 @@ unsafe fn main() -> ! {
         uart_debug_init(uart_debug);
     }
 
-    print_debug_message!(b"Firmware Start!\r\n");
+    print_debug_message!(&debug_uart, b"Firmware Start!\r\n");
 
     let mut buf_display: [u8; 100] = [0; 100];
     buf_display[0] = 'P' as u8;
@@ -176,15 +176,15 @@ unsafe fn main() -> ! {
     let mut serial_id_str = "ERROR";
     let serial_id_converted = str::from_utf8(&buf_display[..id_count]);
 
-    print_debug_message!("jedec_id {:?}\r\n", jedec_id);
+    print_debug_message!(&debug_uart, "jedec_id {:?}\r\n", jedec_id);
 
     match serial_id_converted {
         Ok(serial_id) => {
             serial_id_str = serial_id;
-            print_debug_message!("Serial ID {:?}\r\n", serial_id_str);
+            print_debug_message!(&debug_uart, "Serial ID {:?}\r\n", serial_id_str);
         }
         Err(e) => {
-            print_debug_message!("Serial ID err = {:?}\r\n", e);
+            print_debug_message!(&debug_uart, "Serial ID err = {:?}\r\n", e);
         }
     }
 
@@ -287,7 +287,7 @@ unsafe fn main() -> ! {
         serial_line_ip::DecoderBuffer::new();
 
     // Create the request processor and init all pin to input
-    let mut request_processor = DioRequestProcessor::new(pins_id);
+    let mut request_processor = DioRequestProcessor::new(&debug_uart, &pins_id);
     request_processor.init_all_pins_as_input();
 
     loop {
@@ -303,29 +303,29 @@ unsafe fn main() -> ! {
                 }
                 Ok(count) => {
                     let mut data = &buf[..count];
-                    print_debug_message!(b"========================\r\n");
-                    print_debug_message!("+ recieved: {:?}", data);
+                    print_debug_message!(&debug_uart, b"========================\r\n");
+                    print_debug_message!(&debug_uart, "+ recieved: {:?}", data);
 
                     loop {
-                        // print_debug_message!(b"1");
+                        // print_debug_message!(&debug_uart, b"1");
                         // Check if we have enough data to decode
                         match decode_buffer.feed(data) {
                             Ok((nb_bytes_processed, found_trame_complete)) => {
-                                // print_debug_message!(b"2");
+                                // print_debug_message!(&debug_uart, b"2");
                                 if found_trame_complete {
                                     let trame = decode_buffer.slice();
                                     let request = try_to_decode_api_request(trame).unwrap();
-                                    print_debug_message!("+ process request: {:?}", request);
+                                    print_debug_message!(&debug_uart, "+ process request: {:?}", request);
                                     request_processor.process_request(&mut serial, request);
                                     decode_buffer.reset();
                                     data = &buf[..count - nb_bytes_processed];
                                 } else {
-                                    // print_debug_message!(b"3");
+                                    // print_debug_message!(&debug_uart, b"3");
                                     break;
                                 }
                             }
                             other => {
-                                print_debug_message!("{:?}", other);
+                                print_debug_message!(&debug_uart, "{:?}", other);
                                 break;
                             }
                         }
@@ -350,7 +350,8 @@ fn try_to_decode_api_request(frame: &[u8]) -> Option<PicohaDioRequest> {
             Some(new_request)
         }
         Err(e) => {
-            print_debug_message!("      * error decoding request: {:?}", e);
+	    // TODO
+            //print_debug_message!(&debug_uart, "      * error decoding request: {:?}", e);
             None
         }
     }
@@ -362,10 +363,10 @@ use core::sync::atomic::{self, Ordering};
 #[inline(never)]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    print_debug_message!(b"Panic!\r\n");
-    let line = _info.location().unwrap().line();
-    let file = _info.location().unwrap().file();
-    print_debug_message!("panic {}:{}", file, line);
+    //print_debug_message!(b"Panic!\r\n");
+    //let line = _info.location().unwrap().line();
+    //let file = _info.location().unwrap().file();
+    //print_debug_message!("panic {}:{}", file, line);
 
     loop {
         atomic::compiler_fence(Ordering::SeqCst);

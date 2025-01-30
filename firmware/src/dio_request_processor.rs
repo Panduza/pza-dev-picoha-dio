@@ -1,6 +1,5 @@
 // Print debug support
-#[cfg(any(feature = "uart0_debug"))]
-use crate::uart_debug::uart_debug_print;
+use crate::uart_debug::UartType;
 use crate::{
     api_dio::{PicohaDioAnswer, PicohaDioRequest},
     print_debug_message,
@@ -42,17 +41,22 @@ enum PinValue {
 }
 
 /// Application Digital I/O
-pub struct DioRequestProcessor {
-    pins_id: [Option<DynPinId>; MAX_PINS],
+pub struct DioRequestProcessor<'a> {
+    debug_uart: &'a Option<UartType>,
+    pins_id: &'a [Option<DynPinId>; MAX_PINS],
     pins_o: [Option<PinO>; MAX_PINS],
     pins_i: [Option<PinI>; MAX_PINS],
 }
 
-impl DioRequestProcessor {
+impl<'a> DioRequestProcessor<'a> {
     /// Create a new instance of the DioRequestProcessor
     ///
-    pub fn new(pins_id: [Option<DynPinId>; MAX_PINS]) -> Self {
+    pub fn new(
+        debug_uart: &'a Option<UartType>,
+        pins_id: &'a [Option<DynPinId>; MAX_PINS],
+    ) -> Self {
         DioRequestProcessor {
+            debug_uart: debug_uart,
             pins_id: pins_id,
             pins_o: [PINO_NONE; MAX_PINS],
             pins_i: [PINI_NONE; MAX_PINS],
@@ -72,7 +76,7 @@ impl DioRequestProcessor {
     ///
     fn get_internal_pin_direction(&self, pin: usize) -> Option<PinDirection> {
         // Debug
-        // print_debug_message!("? check pin {:?}\r\n", pin);
+        // print_debug_message!(self.debug_uart, "? check pin {:?}\r\n", pin);
 
         // if pin is in the output array, it is configured as output
         if self.pins_o[pin].is_some() {
@@ -85,7 +89,7 @@ impl DioRequestProcessor {
         }
 
         // else not configured yet
-        // print_debug_message!(b"? not configured\r\n");
+        // print_debug_message!(self.debug_uart, b"? not configured\r\n");
         None
     }
 
@@ -93,7 +97,7 @@ impl DioRequestProcessor {
     ///
     fn get_internal_pin_value(&mut self, pin: usize) -> Option<PinValue> {
         // Debug
-        print_debug_message!("? check pin {:?}\r\n", pin);
+        print_debug_message!(self.debug_uart, "? check pin {:?}\r\n", pin);
 
         let dir = self.get_internal_pin_direction(pin);
         match dir {
@@ -109,7 +113,7 @@ impl DioRequestProcessor {
                     }
                 }
                 PinDirection::Output => {
-                    print_debug_message!(b"      * output ?\r\n");
+                    print_debug_message!(self.debug_uart, b"      * output ?\r\n");
                     let pin_obj = &mut self.pins_o[pin];
                     if let Some(pin_obj) = pin_obj {
                         match pin_obj.is_set_high() {
@@ -126,14 +130,14 @@ impl DioRequestProcessor {
         }
 
         // else not configured yet
-        // print_debug_message!(b"? not configured\r\n");
+        // print_debug_message!(self.debug_uart, b"? not configured\r\n");
         None
     }
 
     /// Set a pin as output
     ///
     fn set_pin_as_output(&mut self, pin_num: usize) {
-        print_debug_message!("\tset pin {:?} as output", pin_num);
+        print_debug_message!(self.debug_uart, "\tset pin {:?} as output", pin_num);
         self.pins_id[pin_num as usize]
             .map(|dyn_id| unsafe {
                 let pin = new_pin(dyn_id);
@@ -149,6 +153,7 @@ impl DioRequestProcessor {
                     // Ignore the error, just a warning
                     .map_err(|_| {
                         print_debug_message!(
+                            self.debug_uart,
                             "      * error converting pin {:?} to output",
                             pin_num
                         );
@@ -157,7 +162,7 @@ impl DioRequestProcessor {
             })
             // Ignore the error, just a warning
             .ok_or_else(|| {
-                print_debug_message!("      * pin {:?} not available", pin_num);
+                print_debug_message!(self.debug_uart, "      * pin {:?} not available", pin_num);
             })
             .ok();
     }
@@ -167,7 +172,7 @@ impl DioRequestProcessor {
     fn set_pin_as_input(&mut self, pin_num: usize) {
         //
         // Debug log
-        print_debug_message!("\tset pin {:?} as input", pin_num);
+        print_debug_message!(self.debug_uart, "\tset pin {:?} as input", pin_num);
 
         //
         // Set the pin as input
@@ -187,13 +192,17 @@ impl DioRequestProcessor {
                     })
                     // Ignore the error, just a warning
                     .map_err(|_| {
-                        print_debug_message!("      * error converting pin {:?} to input", pin_num);
+                        print_debug_message!(
+                            self.debug_uart,
+                            "      * error converting pin {:?} to input",
+                            pin_num
+                        );
                     })
                     .ok();
             })
             // Ignore the error, just a warning
             .ok_or_else(|| {
-                print_debug_message!("      * pin {:?} not available", pin_num);
+                print_debug_message!(self.debug_uart, "      * pin {:?} not available", pin_num);
             })
             .ok();
     }
@@ -201,14 +210,14 @@ impl DioRequestProcessor {
     /// Set a pin low
     ///
     fn set_pin_low(&mut self, pin_num: u32) -> Result<(), &'static str> {
-        print_debug_message!("\t+pin {:?} low", pin_num);
+        print_debug_message!(self.debug_uart, "\t+pin {:?} low", pin_num);
         self.pins_o[pin_num as usize]
             .as_mut()
             .map(|pin| {
                 pin.set_low().unwrap();
             })
             .ok_or_else(|| {
-                print_debug_message!("\t!!!pin {:?} not available", pin_num);
+                print_debug_message!(self.debug_uart, "\t!!!pin {:?} not available", pin_num);
                 "Pin not available"
             })?;
         Ok(())
@@ -217,14 +226,14 @@ impl DioRequestProcessor {
     /// Set a pin high
     ///
     fn set_pin_high(&mut self, pin_num: u32) -> Result<(), &'static str> {
-        print_debug_message!("\t+pin {:?} high", pin_num);
+        print_debug_message!(self.debug_uart, "\t+pin {:?} high", pin_num);
         self.pins_o[pin_num as usize]
             .as_mut()
             .map(|pin| {
                 pin.set_high().unwrap();
             })
             .ok_or_else(|| {
-                print_debug_message!("\t!!!pin {:?} not available", pin_num);
+                print_debug_message!(self.debug_uart, "\t!!!pin {:?} not available", pin_num);
                 "Pin not available"
             })?;
         Ok(())
@@ -239,13 +248,13 @@ impl DioRequestProcessor {
     ) {
         //
         // Debug log
-        print_debug_message!("+ processing request: {:?}", request);
+        print_debug_message!(self.debug_uart, "+ processing request: {:?}", request);
 
         //
         // Choose the correct process function
         match request.r#type {
             femtopb::EnumValue::Known(k) => match k {
-                crate::api_dio::RequestType::Ping => Self::process_request_ping(serial),
+                crate::api_dio::RequestType::Ping => self.process_request_ping(serial),
                 crate::api_dio::RequestType::SetPinDirection => {
                     self.process_request_set_pin_direction(serial, request)
                 }
@@ -265,11 +274,11 @@ impl DioRequestProcessor {
 
     /// Process a ping request
     ///
-    fn process_request_ping(serial: &mut SerialPort<rp2040_hal::usb::UsbBus>) {
-        print_debug_message!(b"\t* processing request: PING\r\n");
+    fn process_request_ping(&self, serial: &mut SerialPort<rp2040_hal::usb::UsbBus>) {
+        print_debug_message!(self.debug_uart, b"\t* processing request: PING\r\n");
         let mut answer = PicohaDioAnswer::default();
         answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-        Self::send_answer(serial, answer);
+        self.send_answer(serial, answer);
     }
 
     /// Process a set pin direction request
@@ -279,7 +288,10 @@ impl DioRequestProcessor {
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
         request: PicohaDioRequest,
     ) {
-        print_debug_message!(b"      * processing request: SET_PIN_DIRECTION\r\n");
+        print_debug_message!(
+            self.debug_uart,
+            b"      * processing request: SET_PIN_DIRECTION\r\n"
+        );
 
         match request.value {
             femtopb::EnumValue::Known(v) => match v {
@@ -288,7 +300,7 @@ impl DioRequestProcessor {
                     self.set_pin_as_output(request.pin_num as usize)
                 }
                 _ => {
-                    print_debug_message!("      * invalid value: {:?}", v);
+                    print_debug_message!(self.debug_uart, "      * invalid value: {:?}", v);
                 }
             },
             femtopb::EnumValue::Unknown(_) => todo!(),
@@ -296,7 +308,7 @@ impl DioRequestProcessor {
 
         let mut answer = PicohaDioAnswer::default();
         answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-        Self::send_answer(serial, answer);
+        self.send_answer(serial, answer);
     }
 
     /// Process a set pin value request
@@ -308,7 +320,7 @@ impl DioRequestProcessor {
     ) {
         //
         // Debug log
-        print_debug_message!(b"\tprocessing request: SET_PIN_VALUE\r\n");
+        print_debug_message!(self.debug_uart, b"\tprocessing request: SET_PIN_VALUE\r\n");
 
         //
         // Process the request
@@ -317,7 +329,7 @@ impl DioRequestProcessor {
                 crate::api_dio::PinValue::Low => self.set_pin_low(request.pin_num),
                 crate::api_dio::PinValue::High => self.set_pin_high(request.pin_num),
                 _ => {
-                    print_debug_message!("\t!!! invalid value: {:?}", v);
+                    print_debug_message!(self.debug_uart, "\t!!! invalid value: {:?}", v);
                     Err("Invalid value")
                 }
             },
@@ -334,7 +346,7 @@ impl DioRequestProcessor {
                 answer.error_message = Some(e);
             }
         }
-        Self::send_answer(serial, answer);
+        self.send_answer(serial, answer);
     }
 
     ///
@@ -346,7 +358,10 @@ impl DioRequestProcessor {
         request: PicohaDioRequest,
     ) {
         // Debug log
-        print_debug_message!(b"      * processing request: GET_PIN_DIRECTION\r\n");
+        print_debug_message!(
+            self.debug_uart,
+            b"      * processing request: GET_PIN_DIRECTION\r\n"
+        );
 
         // Prepare a default answer
         let mut answer = PicohaDioAnswer::default();
@@ -359,12 +374,12 @@ impl DioRequestProcessor {
                 answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
                 match direction {
                     PinDirection::Input => {
-                        print_debug_message!(b"      * input\r\n");
+                        print_debug_message!(self.debug_uart, b"      * input\r\n");
                         answer.value =
                             Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
                     }
                     PinDirection::Output => {
-                        print_debug_message!(b"      * output\r\n");
+                        print_debug_message!(self.debug_uart, b"      * output\r\n");
                         answer.value =
                             Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
                     }
@@ -376,7 +391,7 @@ impl DioRequestProcessor {
         }
 
         // Send back the message
-        Self::send_answer(serial, answer);
+        self.send_answer(serial, answer);
     }
 
     fn process_request_get_pin_value(
@@ -386,7 +401,10 @@ impl DioRequestProcessor {
     ) {
         //
         // Debug log
-        print_debug_message!(b"      * processing request: GET_PIN_VALUE\r\n");
+        print_debug_message!(
+            self.debug_uart,
+            b"      * processing request: GET_PIN_VALUE\r\n"
+        );
 
         //
         // Prepare a default answer
@@ -400,12 +418,12 @@ impl DioRequestProcessor {
                 answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
                 match val {
                     PinValue::Low => {
-                        print_debug_message!(b"      * low\r\n");
+                        print_debug_message!(self.debug_uart, b"      * low\r\n");
                         answer.value =
                             Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Low));
                     }
                     PinValue::High => {
-                        print_debug_message!(b"      * high\r\n");
+                        print_debug_message!(self.debug_uart, b"      * high\r\n");
                         answer.value =
                             Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::High));
                     }
@@ -418,19 +436,23 @@ impl DioRequestProcessor {
 
         //
         // Send back the message
-        Self::send_answer(serial, answer);
+        self.send_answer(serial, answer);
     }
 
     /// Send an answer
     ///
-    fn send_answer(serial: &mut SerialPort<rp2040_hal::usb::UsbBus>, answer: PicohaDioAnswer) {
+    fn send_answer(
+        &self,
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
+        answer: PicohaDioAnswer,
+    ) {
         let mut buffer = [0u8; 64];
         let encoded_len = answer.encoded_len();
         answer.encode(&mut buffer.as_mut()).unwrap();
 
-        print_debug_message!("      * answer: {:?}", answer);
-        // print_debug_message!("      * sending answer: {:?}", encoded_len);
-        // print_debug_message!("      * sending answer: {:?}", &buffer[..encoded_len]);
+        print_debug_message!(self.debug_uart, "      * answer: {:?}", answer);
+        // print_debug_message!(self.debug_uart, "      * sending answer: {:?}", encoded_len);
+        // print_debug_message!(self.debug_uart, "      * sending answer: {:?}", &buffer[..encoded_len]);
 
         // Prepare encoding
         let mut encoded_command = [0u8; 1024];
@@ -440,7 +462,7 @@ impl DioRequestProcessor {
         let mut totals = match slip_encoder.encode(&buffer[..encoded_len], &mut encoded_command) {
             Ok(t) => t,
             Err(e) => {
-                print_debug_message!("      * error encoding answer: {:?}", e);
+                print_debug_message!(self.debug_uart, "      * error encoding answer: {:?}", e);
                 return;
             }
         };
@@ -449,20 +471,21 @@ impl DioRequestProcessor {
         totals += match slip_encoder.finish(&mut encoded_command[totals.written..]) {
             Ok(t) => t,
             Err(e) => {
-                print_debug_message!("      * error encoding answer: {:?}", e);
+                print_debug_message!(self.debug_uart, "      * error encoding answer: {:?}", e);
                 return;
             }
         };
 
-        // print_debug_message!("      * sending answer: {:?}", totals.written);
+        // print_debug_message!(self.debug_uart, "      * sending answer: {:?}", totals.written);
         print_debug_message!(
+            self.debug_uart,
             "      * sending answer: {:?}",
             &encoded_command[..totals.written]
         );
 
         match serial.write(&encoded_command[..totals.written]) {
-            Ok(_) => print_debug_message!(b"      * answer sent\r\n"),
-            Err(e) => print_debug_message!("      * answer not sent {:?}", e),
+            Ok(_) => print_debug_message!(self.debug_uart, b"      * answer sent\r\n"),
+            Err(e) => print_debug_message!(self.debug_uart, "      * answer not sent {:?}", e),
         }
     }
 }
