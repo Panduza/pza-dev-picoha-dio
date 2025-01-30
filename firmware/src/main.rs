@@ -1,19 +1,17 @@
-//! Blinks the LED on a Pico board
-//!
-//! This will blink an LED attached to GP25, which is the pin the Pico uses for the on-board LED.
+//! Use your Raspberry Pico board as a GPIO extender
 #![no_std]
 #![no_main]
 
 // uart debug
 mod uart_debug;
 use rp2040_hal::gpio::DynPinId;
-// use rp2040_hal::gpio::new_pin;
-#[cfg(any(feature = "uart0_debug"))]
-use uart_debug::uart_debug_init;
 #[cfg(any(feature = "uart0_debug"))]
 use uart_debug::uart_debug_print;
 
+use crate::uart_debug::UartType;
+
 use crate::api_dio::PicohaDioRequest;
+
 // application logic
 mod api_dio_utils;
 mod dio_request_processor;
@@ -21,13 +19,11 @@ mod dio_request_processor;
 use dio_request_processor::DioRequestProcessor;
 
 use bsp::entry;
-use femtopb::Message;
+use femtopb::{error::DecodeError, Message};
 mod api_dio;
 
 // Used to demonstrate writing formatted strings
-#[cfg(any(feature = "uart0_debug"))]
 use core::fmt::Write;
-use core::str;
 
 #[cfg(any(feature = "uart0_debug"))]
 use fugit::RateExtU32;
@@ -57,34 +53,8 @@ use bsp::hal::{clocks::init_clocks_and_plls, pac, sio::Sio, watchdog::Watchdog};
 
 use serial_line_ip;
 
-fn format_id(id: &[u8], buf: &mut [u8]) -> usize {
-    let mut i = 0;
-    for byte in id {
-        // print_debug_message!("convert {:?}\r\n", byte);
-
-        let high_nibble = (byte >> 4) & 0xF;
-        let low_nibble = byte & 0xF;
-        buf[i] = if high_nibble < 10 {
-            b'0' + high_nibble as u8
-        } else {
-            b'A' + (high_nibble - 10) as u8
-        };
-        // print_debug_message!("- {:?}\r\n", buf[i]);
-        i += 1;
-        buf[i] = if low_nibble < 10 {
-            b'0' + low_nibble as u8
-        } else {
-            b'A' + (low_nibble - 10) as u8
-        };
-        // print_debug_message!("- {:?}\r\n", buf[i]);
-        i += 1;
-    }
-    i
-}
-
 #[entry]
 unsafe fn main() -> ! {
-    // info!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();
     let _core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
@@ -103,9 +73,6 @@ unsafe fn main() -> ! {
     )
     .ok()
     .unwrap();
-
-    // let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-    // let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let use_boot2 = true;
     let jedec_id = rp2040_flash::flash::flash_jedec_id(use_boot2);
@@ -142,51 +109,32 @@ unsafe fn main() -> ! {
     // --------------------------------------------------------------
     // Init uart debug
     // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
+    #[cfg(not(feature = "uart0_debug"))]
+    let debug_uart = None;
+    #[cfg(any(feature = "uart0_debug"))]
+    let mut debug_uart = None;
     #[cfg(any(feature = "uart0_debug"))]
     {
-        let uart_debug_pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
-        let uart_debug = UartPeripheral::new(pac.UART0, uart_debug_pins, &mut pac.RESETS)
-            .enable(
-                UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
-                clocks.peripheral_clock.freq(),
-            )
-            .unwrap();
-        uart_debug_init(uart_debug);
+        let debug_uart_pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
+        debug_uart = Some(
+            UartPeripheral::new(pac.UART0, debug_uart_pins, &mut pac.RESETS)
+                .enable(
+                    UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
+                    clocks.peripheral_clock.freq(),
+                )
+                .unwrap(),
+        );
     }
 
     print_debug_message!(&debug_uart, b"Firmware Start!\r\n");
 
-    let mut buf_display: [u8; 100] = [0; 100];
-    buf_display[0] = 'P' as u8;
-    buf_display[1] = 'I' as u8;
-    buf_display[2] = 'C' as u8;
-    buf_display[3] = 'O' as u8;
-    buf_display[4] = 'H' as u8;
-    buf_display[5] = 'A' as u8;
-    buf_display[6] = 'D' as u8;
-    buf_display[7] = 'I' as u8;
-    buf_display[8] = 'O' as u8;
-    let mut id_count = format_id(&id_unique, &mut buf_display[9..]);
-    id_count += 9;
-
-    // PICOHADIO_E6 61 64 07 E3 35 3C 27
-
-    // let id_count = 9;
-
-    let mut serial_id_str = "ERROR";
-    let serial_id_converted = str::from_utf8(&buf_display[..id_count]);
+    let mut serial_id_str = heapless::String::<100>::new();
+    write!(serial_id_str, "PICOHADIO{:x?}", id_unique).unwrap_or_else(|_| {
+        print_debug_message!(&debug_uart, b"Error fetch serial id");
+    });
 
     print_debug_message!(&debug_uart, "jedec_id {:?}\r\n", jedec_id);
-
-    match serial_id_converted {
-        Ok(serial_id) => {
-            serial_id_str = serial_id;
-            print_debug_message!(&debug_uart, "Serial ID {:?}\r\n", serial_id_str);
-        }
-        Err(e) => {
-            print_debug_message!(&debug_uart, "Serial ID err = {:?}\r\n", e);
-        }
-    }
+    print_debug_message!(&debug_uart, "Serial ID {:?}\r\n", &serial_id_str);
 
     // --------------------------------------------------------------
     // USB CDC
@@ -202,13 +150,10 @@ unsafe fn main() -> ! {
     let mut serial: SerialPort<rp2040_hal::usb::UsbBus> = SerialPort::new(&usb_bus);
     // Create a USB device with a fake VID and PID
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x05E1))
-        .strings(&[
-            StringDescriptors::default()
-                .manufacturer("panduza")
-                .product("picoha-dio")
-                // .serial_number("TEST")
-                .serial_number(serial_id_str), // .serial_number(str::from_utf8(&buf_display[..id_count]).unwrap())
-        ])
+        .strings(&[StringDescriptors::default()
+            .manufacturer("panduza")
+            .product("picoha-dio")
+            .serial_number(&serial_id_str)])
         .unwrap()
         .device_class(2) // from: https://www.usb.org/defined-class-codes
         .build();
@@ -282,7 +227,6 @@ unsafe fn main() -> ! {
         // None,
     ];
 
-    // let mut request_buffer = DioRequestBuffer::new();
     let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =
         serial_line_ip::DecoderBuffer::new();
 
@@ -314,11 +258,16 @@ unsafe fn main() -> ! {
                                 // print_debug_message!(&debug_uart, b"2");
                                 if found_trame_complete {
                                     let trame = decode_buffer.slice();
-                                    let request = try_to_decode_api_request(trame).unwrap();
-                                    print_debug_message!(&debug_uart, "+ process request: {:?}", request);
-                                    request_processor.process_request(&mut serial, request);
-                                    decode_buffer.reset();
-                                    data = &buf[..count - nb_bytes_processed];
+                                    if let Ok(request) = decode_api_request(&debug_uart, trame) {
+                                        print_debug_message!(
+                                            &debug_uart,
+                                            "+ process request: {:?}",
+                                            request
+                                        );
+                                        request_processor.process_request(&mut serial, request);
+                                        decode_buffer.reset();
+                                        data = &buf[..count - nb_bytes_processed];
+                                    }
                                 } else {
                                     // print_debug_message!(&debug_uart, b"3");
                                     break;
@@ -329,8 +278,6 @@ unsafe fn main() -> ! {
                                 break;
                             }
                         }
-
-                        // Try to parse a request from the buffer
                     }
                 }
             }
@@ -338,23 +285,24 @@ unsafe fn main() -> ! {
     }
 }
 
-/// Try to decode an API request
+/// Decode an API request
 ///
-fn try_to_decode_api_request(frame: &[u8]) -> Option<PicohaDioRequest> {
-    match PicohaDioRequest::decode(frame) {
-        Ok(ppp) => {
+fn decode_api_request<'a>(
+    debug_uart: &'a Option<UartType>,
+    frame: &'a [u8],
+) -> Result<PicohaDioRequest<'a>, DecodeError> {
+    PicohaDioRequest::decode(frame)
+        .and_then(|ppp| {
             let mut new_request = PicohaDioRequest::default();
             new_request.r#type = ppp.r#type;
             new_request.pin_num = ppp.pin_num;
             new_request.value = ppp.value;
-            Some(new_request)
-        }
-        Err(e) => {
-	    // TODO
-            //print_debug_message!(&debug_uart, "      * error decoding request: {:?}", e);
-            None
-        }
-    }
+            Ok(new_request)
+        })
+        .or_else(|e| {
+            print_debug_message!(&debug_uart, "      * error decoding request: {:?}", &e);
+            Err(e)
+        })
 }
 
 use core::panic::PanicInfo;
