@@ -53,6 +53,8 @@ use bsp::hal::{clocks::init_clocks_and_plls, pac, sio::Sio, watchdog::Watchdog};
 
 use serial_line_ip;
 
+pub const MAX_PINS: usize = 29;
+
 #[entry]
 unsafe fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
@@ -161,7 +163,7 @@ unsafe fn main() -> ! {
     // --------------------------------------------------------------
 
     #[cfg(any(feature = "uart0_debug"))]
-    let pins_id: [Option<DynPinId>; 23] = [
+    let pins_id: [Option<DynPinId>; MAX_PINS] = [
         None, // 0 debug uart
         None, // 1 debug uart
         Some(pins.gpio2.into_dyn_pin().id()),
@@ -185,16 +187,16 @@ unsafe fn main() -> ! {
         Some(pins.gpio20.into_dyn_pin().id()),
         Some(pins.gpio21.into_dyn_pin().id()),
         Some(pins.gpio22.into_dyn_pin().id()),
-        // None, // 23
-        // None, // 24
-        // None, // 25 led
-        // None, // 26
-        // None, // 27
-        // None,
-        // None,
+        None, // 23 Controls the on-board SMPS Power Save pin
+        None, // 24 VBUS sense - high if VBUS is present, else low
+        None, // 25 Connected to user LED
+        Some(pins.gpio26.into_dyn_pin().id()),
+        Some(pins.gpio27.into_dyn_pin().id()),
+        Some(pins.gpio28.into_dyn_pin().id()),
+	// 29 Used in ADC mode (ADC3) to measure VSYS/3
     ];
     #[cfg(not(any(feature = "uart0_debug")))]
-    let pins_id: [Option<DynPinId>; 23] = [
+    let pins_id: [Option<DynPinId>; MAX_PINS] = [
         Some(pins.gpio0.into_dyn_pin().id()),
         Some(pins.gpio1.into_dyn_pin().id()),
         Some(pins.gpio2.into_dyn_pin().id()),
@@ -218,13 +220,13 @@ unsafe fn main() -> ! {
         Some(pins.gpio20.into_dyn_pin().id()),
         Some(pins.gpio21.into_dyn_pin().id()),
         Some(pins.gpio22.into_dyn_pin().id()),
-        // None, // 23
-        // None, // 24
-        // None, // 25 led
-        // None, // 26
-        // None, // 27
-        // None,
-        // None,
+        None, // 23 Controls the on-board SMPS Power Save pin
+        None, // 24 VBUS sense - high if VBUS is present, else low
+        None, // 25 Connected to user LED
+        Some(pins.gpio26.into_dyn_pin().id()),
+        Some(pins.gpio27.into_dyn_pin().id()),
+        Some(pins.gpio28.into_dyn_pin().id()),
+	// 29 Used in ADC mode (ADC3) to measure VSYS/3
     ];
 
     let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =

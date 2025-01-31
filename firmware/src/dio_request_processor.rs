@@ -16,7 +16,7 @@ use rp2040_hal::gpio::DynPinId;
 // USB Communications Class Device support
 use usbd_serial::SerialPort;
 
-const MAX_PINS: usize = 23;
+use crate::MAX_PINS;
 
 #[derive(PartialEq)]
 enum PinDirection {
