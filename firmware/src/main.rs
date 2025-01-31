@@ -264,7 +264,7 @@ unsafe fn main() -> ! {
                                             "+ process request: {:?}",
                                             request
                                         );
-                                        request_processor.process_request(&mut serial, request);
+                                        request_processor.process_request(&mut serial, &request);
                                         decode_buffer.reset();
                                         data = &buf[..count - nb_bytes_processed];
                                     }
