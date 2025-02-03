@@ -37,17 +37,19 @@ from API_PicoHostAdapterDio import PicoHostAdapterDio
 @timeout_wrapper()
 def test_impossible_to_reset_pins(test: PicoHostAdapterDio):
     """
-    Impossible to reset Pins to INTPUT #2
+    Impossible to reset Pins to INPUT #2
     After Set pin to OUTPUT, user is not able to Reset pin to INPUT
     """
-    logging.info("Impossible to reset Pins to INTPUT #2")
+    logging.info("Impossible to reset Pins to INPUT #2")
     test.ping_info()
 
     test.set_gpio_direction(gpio=2, direction=dio.PinValue.OUTPUT)
-    assert test.get_gpio_direction(gpio=2)
+    assert test.get_gpio_direction(gpio=2), "GPIO not re-set to OUTPUT."
 
     test.set_gpio_direction(gpio=2, direction=dio.PinValue.INPUT)
-    assert test.get_gpio_direction(gpio=2).value == dio.PinValue.INPUT
+    assert (
+        test.get_gpio_direction(gpio=2).value == dio.PinValue.INPUT
+    ), "GPIO not re-set to INPUT."
 
 
 @setup_test
@@ -61,21 +63,27 @@ def test_impossible_to_use_pin(test: PicoHostAdapterDio):
     test.ping_info()
 
     test.set_gpio_direction(gpio=26, direction=dio.PinValue.OUTPUT)
-    assert test.get_gpio_direction(gpio=26).value == dio.PinValue.OUTPUT, "TOTO"
+    assert (
+        test.get_gpio_direction(gpio=26).value == dio.PinValue.OUTPUT
+    ), "GPIO not set to expected direction."
     test.set_gpio_direction(gpio=27, direction=dio.PinValue.OUTPUT)
-    assert test.get_gpio_direction(gpio=27).value == dio.PinValue.OUTPUT
+    assert (
+        test.get_gpio_direction(gpio=27).value == dio.PinValue.OUTPUT
+    ), "GPIO not set to expected direction."
     test.set_gpio_direction(gpio=28, direction=dio.PinValue.OUTPUT)
-    assert test.get_gpio_direction(gpio=28).value == dio.PinValue.OUTPUT
+    assert (
+        test.get_gpio_direction(gpio=28).value == dio.PinValue.OUTPUT
+    ), "GPIO not set to expected direction."
 
     assert (
         test.set_gpio_value(gpio=26, value=dio.PinValue.LOW) == dio.AnswerType.SUCCESS
-    )
+    ), "GPIO not set to expected value."
     assert (
         test.set_gpio_value(gpio=27, value=dio.PinValue.LOW) == dio.AnswerType.SUCCESS
-    )
+    ), "GPIO not set to expected value."
     assert (
         test.set_gpio_value(gpio=28, value=dio.PinValue.LOW) == dio.AnswerType.SUCCESS
-    )
+    ), "GPIO not set to expected value."
 
 
 @setup_test
@@ -92,13 +100,15 @@ def test_no_failure_when_using_not_existing_pins(test: PicoHostAdapterDio):
     assert (
         test.set_gpio_direction(gpio=50, direction=dio.PinValue.OUTPUT)
         == dio.AnswerType.FAILURE
-    )
+    ), "There is no failure"
 
-    assert test.get_gpio_direction(gpio=50).type == dio.AnswerType.FAILURE
+    assert (
+        test.get_gpio_direction(gpio=50).type == dio.AnswerType.FAILURE
+    ), "There is no failure"
 
     assert (
         test.set_gpio_value(gpio=50, value=dio.PinValue.HIGH) == dio.AnswerType.FAILURE
-    )
+    ), "There is no failure"
 
     test.ping_info()
 
@@ -118,13 +128,17 @@ def test_fail_to_read_gpio_value(test: PicoHostAdapterDio):
     test.get_gpio_direction(gpio=5)
 
     test.set_gpio_value(gpio=5, value=dio.PinValue.HIGH)
-    assert test.get_gpio_value(gpio=4).value == dio.PinValue.HIGH
+    assert (
+        test.get_gpio_value(gpio=4).value == dio.PinValue.HIGH
+    ), "GPIO not set to expected value."
 
     test.set_gpio_value(gpio=5, value=dio.PinValue.LOW)
-    assert test.get_gpio_value(gpio=4).value == dio.PinValue.LOW
+    assert (
+        test.get_gpio_value(gpio=4).value == dio.PinValue.LOW
+    ), "GPIO not set to expected value."
 
 
-# ============= Main Fonctions =================
+# ============= Main Functions =================
 
 if __name__ == "__main__":
     """Run small test scenarios to help in Git issues validation"""
