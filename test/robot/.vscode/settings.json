@@ -2,12 +2,12 @@
     // Robot Frameworke
     "robotcode.robot.pythonPath": [
         "${workspaceFolder}/libraries",
-        "${workspaceFolder}/platform/RaberryPico"
+        "${workspaceFolder}/platform/RaspberryPico"
     ],
     // Python test
     "python.analysis.extraPaths": [
         "${workspaceFolder}/libraries",
-        "${workspaceFolder}/platform/RaberryPico"
+        "${workspaceFolder}/platform/RaspberryPico"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,

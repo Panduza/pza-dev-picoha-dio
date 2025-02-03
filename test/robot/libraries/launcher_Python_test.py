@@ -99,7 +99,7 @@ def setup_test(func):
     return wrapper
 
 
-# ============ Utilities Fonctions =============
+# ============ Utilities Functions =============
 
 
 def results_md_chart():
@@ -147,7 +147,7 @@ def result_analyze():
 
 
 def print_results():
-    """Use print fonction to display result in term."""
+    """Use print function to display result in term."""
     total_test_run, number_of_test_pass, number_of_test_ongoing, number_of_test_fail = (
         result_analyze()
     )
@@ -164,7 +164,7 @@ def print_results():
     print("---------------------------")
 
 
-# ============= Main Fonctions =================
+# ============= Main Functions =================
 
 if __name__ == "__main__":
 

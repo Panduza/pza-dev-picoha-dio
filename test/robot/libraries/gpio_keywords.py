@@ -30,7 +30,7 @@ def connect_to_dut(port_com_dut: str):
         raise SyntaxError(f"{err}")
     except:
         raise Exception(
-            f"Imposible to create object PicoHost Adapter Dio on {port_com_dut}"
+            f"Impossible to create object PicoHost Adapter Dio on {port_com_dut}"
         )
 
 
@@ -41,7 +41,7 @@ def disconnect():
     except SyntaxError as err:
         raise SyntaxError(f"{err}")
     except:
-        raise Exception(f"Imposible to delete object PicoHost Adapter Dio")
+        raise Exception(f"Impossible to delete object PicoHost Adapter Dio")
 
 
 def is_connected():

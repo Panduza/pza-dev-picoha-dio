@@ -18,7 +18,7 @@ import api_dio_pb2 as dio
 # ================== Variables =================
 
 
-# ================== Fonctions =================
+# ================== Functions =================
 def setup_logging(
     loggingLevel=logging.INFO,
     savelog=False,
@@ -75,7 +75,7 @@ class PicoHostAdapterDio:
         pin_num: int = None,
         pin_value: dio.PinValue = None,
     ):
-        """Send commend by serial COM"""
+        """Send command by serial COM"""
         picoha_dio_request = dio.PicohaDioRequest()
         picoha_dio_request.type = request_type
         if pin_value:
@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
     help(PicoHostAdapterDio)
     """
-    ## Exemple:
+    ## Example:
     import time
     # Setup
     logger = setup_logging(loggingLevel = logging.DEBUG)

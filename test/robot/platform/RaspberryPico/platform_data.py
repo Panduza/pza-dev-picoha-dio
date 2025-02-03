@@ -1,5 +1,5 @@
 """
-This file describe Rasberry Pico
+This file describe Raspberry Pico
 """
 
 import logging, os
@@ -51,7 +51,7 @@ def get_comp_gpio(gpio: int):
        Get paired GPIO
 
        # Raspberry Pico testing Setup
-       To simplified the validation process GPIO are connecte in paire.
+       To simplified the validation process GPIO are connected in pair.
                ┌──────┐--┌──────┐
      ── GPIO0  | 1    └──┘   40 |  VBUS
      ── GPIO1  | 2    USB    39 |  VSYS

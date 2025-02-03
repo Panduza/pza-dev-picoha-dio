@@ -16,30 +16,30 @@ ${Status_Last_CMD} =    None
 *** Keywords ***
 
 Main Test Platform Setup
-    [Documentation]    Prepare testing environement
+    [Documentation]    Prepare testing environment
     Set Log Level    TRACE
     Connect To Dut    ${PORT_COM_DUT}
     Log     "RaspberryPico Setup"
 
 Main Test Platform Cleanup
-    [Documentation]    Clean testing environement
+    [Documentation]    Clean testing environment
     Disconnect
     Log     "RaspberryPico Cleanup"
 
 
 # Keywords can be place in other files to organize the code
 a system that is correctly initialized
-    [Documentation]    Check the systeme is correctly initialized
+    [Documentation]    Check the system is correctly initialized
     is connected
     ping
     Log                 "system is initialized"
 
 communication working
-    [Documentation]    Send Ping commend
+    [Documentation]    Send Ping command
     ${ping}    ping
    
 the system is asked to set @{GPIOs_list} as "${direction}"
-    [Documentation]    Set GPIOs and its paire to direction 
+    [Documentation]    Set GPIOs and its pair to direction 
     ...                - GPIOs_list : list of int 
     ...                - direction : string [ INPUT / OUTPUT ]
     FOR    ${gpio}   IN    @{GPIOs_list}
@@ -95,7 +95,7 @@ the system is asked to set a not existing gpio
     Set Global Variable     ${Status_Last_CMD}    ${Status} 
 
 output error must be FAILURE
-    [Documentation]    Check the Status of the last commend send
+    [Documentation]    Check the Status of the last command send
     Log    ${Status_Last_CMD}
     IF    '${Status_Last_CMD}' != 'FAILURE'
         Fail    Output is't correct, it must be Fail
