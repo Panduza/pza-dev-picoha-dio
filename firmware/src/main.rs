@@ -130,8 +130,20 @@ unsafe fn main() -> ! {
 
     print_debug_message!(&debug_uart, b"Firmware Start!\r\n");
 
-    let mut serial_id_str = heapless::String::<100>::new();
-    write!(serial_id_str, "PICOHADIO{:x?}", id_unique).unwrap_or_else(|_| {
+    let mut serial_id_str = heapless::String::<32>::new();
+    write!(
+        serial_id_str,
+        "PICOHADIO{:x}{:x}{:x}{:x}{:x}{:x}{:x}{:x}",
+        id_unique[0],
+        id_unique[1],
+        id_unique[2],
+        id_unique[3],
+        id_unique[4],
+        id_unique[5],
+        id_unique[6],
+        id_unique[7]
+    )
+    .unwrap_or_else(|_| {
         print_debug_message!(&debug_uart, b"Error fetch serial id");
     });
 
