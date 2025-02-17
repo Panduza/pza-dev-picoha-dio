@@ -1,12 +1,10 @@
 mod libs;
-use futures::FutureExt;
-use tokio_serial::SerialPort;
-use std::{time::{self, Duration}};
-use tokio::time::sleep;
+//use std::{time::{self, Duration}};
+//use tokio::time::sleep;
 
 use libs::connectors::UsbSettings;
 
-use cucumber::{writer::out::WriteStrExt, World};
+use cucumber::World;
 
 use libs::world::PiochaWorld;
 

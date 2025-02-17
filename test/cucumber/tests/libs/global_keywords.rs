@@ -137,7 +137,7 @@ async fn i_send_a_corrupted_data_to_the_device(world: &mut PiochaWorld) {
 }
 
 #[when(expr = "I wait for 2 seconds")]
-async fn wait_2_sec(world: &mut PiochaWorld) {
+async fn wait_2_sec(_world: &mut PiochaWorld) {
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 }
 
