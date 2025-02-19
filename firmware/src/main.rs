@@ -113,20 +113,19 @@ unsafe fn main() -> ! {
     // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
     #[cfg(not(feature = "uart0_debug"))]
     let debug_uart = None;
+    
     #[cfg(any(feature = "uart0_debug"))]
-    let mut debug_uart = None;
-    #[cfg(any(feature = "uart0_debug"))]
-    {
+    let debug_uart = {
         let debug_uart_pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
-        debug_uart = Some(
+        Some(
             UartPeripheral::new(pac.UART0, debug_uart_pins, &mut pac.RESETS)
                 .enable(
                     UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
                     clocks.peripheral_clock.freq(),
                 )
                 .unwrap(),
-        );
-    }
+        )
+    };
 
     print_debug_message!(&debug_uart, b"Firmware Start!\r\n");
 
