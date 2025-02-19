@@ -1,4 +1,10 @@
+# Tools
+configparser
+# Protocol
 pyserial
 sliplib==0.6.2
 protobuf==5.28.0
+# Test Python
+pytest
+# Test Robot Framework
 robotframework
