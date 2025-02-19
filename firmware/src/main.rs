@@ -4,11 +4,9 @@
 
 // uart debug
 mod uart_debug;
-use rp2040_hal::gpio::DynPinId;
-#[cfg(any(feature = "uart0_debug"))]
-use uart_debug::uart_debug_print;
 
-use crate::uart_debug::UartType;
+#[cfg(any(feature = "uart0_debug"))]
+use uart_debug::{uart_debug_init, uart_debug_print, DebugUart};
 
 use crate::api_dio::PicohaDioRequest;
 
@@ -18,280 +16,237 @@ mod dio_request_processor;
 
 use dio_request_processor::DioRequestProcessor;
 
-use bsp::entry;
 use femtopb::{error::DecodeError, Message};
 mod api_dio;
 
 // Used to demonstrate writing formatted strings
 use core::fmt::Write;
 
-#[cfg(any(feature = "uart0_debug"))]
-use fugit::RateExtU32;
-#[cfg(any(feature = "uart0_debug"))]
-use rp2040_hal::{
-    // pio::PIOExt,
-    uart::{DataBits, StopBits, UartConfig, UartPeripheral},
-};
-// USB Device support
-use usb_device::{class_prelude::*, prelude::*};
-
-// USB Communications Class Device support
-use usbd_serial::SerialPort;
 // A shorter alias for the Hardware Abstraction Layer, which provides
-// higher-level drivers.
-use rp_pico::hal;
-
-// Provide an alias for our BSP so we can switch targets quickly.
-// Uncomment the BSP you included in Cargo.toml, the rest of the code does not need to change.
-use rp_pico as bsp;
-// use sparkfun_pro_micro_rp2040 as bsp;
-
-#[cfg(any(feature = "uart0_debug"))]
-use bsp::hal::clocks::Clock;
-
-use bsp::hal::{clocks::init_clocks_and_plls, pac, sio::Sio, watchdog::Watchdog};
 
 use serial_line_ip;
 
+use defmt::*;
+use embassy_executor::Spawner;
+use embassy_rp::bind_interrupts;
+// use embassy_rp::gpio;
+use embassy_rp::gpio::Flex;
+use embassy_rp::peripherals::USB;
+use embassy_rp::uart;
+use embassy_rp::usb::{Driver, InterruptHandler};
+use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
+use embassy_usb::UsbDevice;
+use {defmt_rtt as _, panic_probe as _};
+
+use static_cell::StaticCell;
+
 pub const MAX_PINS: usize = 29;
 
-#[entry]
-unsafe fn main() -> ! {
-    let mut pac = pac::Peripherals::take().unwrap();
-    let _core = pac::CorePeripherals::take().unwrap();
-    let mut watchdog = Watchdog::new(pac.WATCHDOG);
-    let sio = Sio::new(pac.SIO);
+#[embassy_executor::main]
+async fn _main(spawner: Spawner) -> ! {
+    let p = embassy_rp::init(Default::default());
 
-    // External high-speed crystal on the pico board is 12Mhz
-    let external_xtal_freq_hz = 12_000_000u32;
-    let clocks = init_clocks_and_plls(
-        external_xtal_freq_hz,
-        pac.XOSC,
-        pac.CLOCKS,
-        pac.PLL_SYS,
-        pac.PLL_USB,
-        &mut pac.RESETS,
-        &mut watchdog,
-    )
-    .ok()
-    .unwrap();
-
-    let use_boot2 = true;
-    let jedec_id = rp2040_flash::flash::flash_jedec_id(use_boot2);
-
-    //
-    let mut id_unique: [u8; 8] = [0; 8];
-    rp2040_flash::flash::flash_unique_id(&mut id_unique, use_boot2);
-
-    // --------------------------------------------------------------
-    // Get pins of the systems
-    let pins: rp_pico::Pins = bsp::Pins::new(
-        pac.IO_BANK0,
-        pac.PADS_BANK0,
-        sio.gpio_bank0,
-        &mut pac.RESETS,
-    );
-
-    // --------------------------------------------------------------
-    // test leds
-
-    // Set GPIO2 as output high
-    // let mut out = pins.gpio3.into_push_pull_output();
-    // // out.set_drive_strength(OutputDriveStrength::TwelveMilliAmps);
-    // out.set_drive_strength(OutputDriveStrength::TwoMilliAmps);
-    // out.set_high().unwrap();
-
-    // // Set GPIO3 as output low
-    // let mut inn = pins.gpio2.into_push_pull_output();
-    // inn.set_drive_strength(OutputDriveStrength::TwoMilliAmps);
-    // inn.set_low().unwrap();
-    // pins.gpio3.into_pull_down_input();
-    // pins.gpio3.into_pull_down_disabled();
-
-    // --------------------------------------------------------------
     // Init uart debug
     // Set up UART on GP0 and GP1 (Pico pins 1 and 2)
-    #[cfg(not(feature = "uart0_debug"))]
-    let debug_uart = None;
     #[cfg(any(feature = "uart0_debug"))]
-    let mut debug_uart = None;
-    #[cfg(any(feature = "uart0_debug"))]
-    {
-        let debug_uart_pins = (pins.gpio0.into_function(), pins.gpio1.into_function());
-        debug_uart = Some(
-            UartPeripheral::new(pac.UART0, debug_uart_pins, &mut pac.RESETS)
-                .enable(
-                    UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
-                    clocks.peripheral_clock.freq(),
-                )
-                .unwrap(),
-        );
+    unsafe {
+        static mut UART: Option<DebugUart> = None;
+
+        UART = {
+            let config = uart::Config::default();
+            Some(uart::Uart::new_blocking(p.UART0, p.PIN_0, p.PIN_1, config))
+        };
+        uart_debug_init(&mut UART);
     }
 
-    print_debug_message!(&debug_uart, b"Firmware Start!\r\n");
+    print_debug_message!(b"Firmware Start!\r\n");
 
-    let mut serial_id_str = heapless::String::<32>::new();
-    write!(
-        serial_id_str,
-        "PICOHADIO{:x}{:x}{:x}{:x}{:x}{:x}{:x}{:x}",
-        id_unique[0],
-        id_unique[1],
-        id_unique[2],
-        id_unique[3],
-        id_unique[4],
-        id_unique[5],
-        id_unique[6],
-        id_unique[7]
-    )
-    .unwrap_or_else(|_| {
-        print_debug_message!(&debug_uart, b"Error fetch serial id");
-    });
+    let use_boot2 = true;
+    let mut id_unique: [u8; 8] = [0; 8];
+    static mut SERIAL_ID_STR: heapless::String<32> = heapless::String::<32>::new();
 
-    print_debug_message!(&debug_uart, "jedec_id {:?}\r\n", jedec_id);
-    print_debug_message!(&debug_uart, "Serial ID {:?}\r\n", &serial_id_str);
+    unsafe {
+        let jedec_id = rp2040_flash::flash::flash_jedec_id(use_boot2);
+
+        //
+        rp2040_flash::flash::flash_unique_id(&mut id_unique, use_boot2);
+        print_debug_message!("jedec_id {:?}\r\n", jedec_id);
+
+        core::write!(
+            SERIAL_ID_STR,
+            "PICOHADIO{:X}{:X}{:X}{:X}{:X}{:X}{:X}{:X}",
+            id_unique[0],
+            id_unique[1],
+            id_unique[2],
+            id_unique[3],
+            id_unique[4],
+            id_unique[5],
+            id_unique[6],
+            id_unique[7]
+        )
+        .unwrap_or_else(|_| {
+            print_debug_message!(b"Error fetch serial id");
+        });
+
+        print_debug_message!("Serial ID {:?}\r\n", &raw const SERIAL_ID_STR);
+    }
 
     // --------------------------------------------------------------
     // USB CDC
-    // Set up the USB driver
-    let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
-        pac.USBCTRL_REGS,
-        pac.USBCTRL_DPRAM,
-        clocks.usb_clock,
-        true,
-        &mut pac.RESETS,
-    ));
-    // Set up the USB Communications Class Device driver
-    let mut serial: SerialPort<rp2040_hal::usb::UsbBus> = SerialPort::new(&usb_bus);
-    // Create a USB device with a fake VID and PID
-    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x05E1))
-        .strings(&[StringDescriptors::default()
-            .manufacturer("panduza")
-            .product("picoha-dio")
-            .serial_number(&serial_id_str)])
-        .unwrap()
-        .device_class(2) // from: https://www.usb.org/defined-class-codes
-        .build();
+    // Create the driver, from the HAL.
+    let driver = Driver::new(p.USB, Irqs);
+
+    // Create embassy-usb Config
+    let config = unsafe {
+        let mut config = embassy_usb::Config::new(0x16c0, 0x5e1);
+        config.manufacturer = Some("Panduza");
+        config.product = Some("PICOHA-DIO");
+        config.serial_number = Some(&SERIAL_ID_STR);
+        config.max_power = 100;
+        config.max_packet_size_0 = 64;
+        config
+    };
+
+    // Create embassy-usb DeviceBuilder using the driver and config.
+    // It needs some buffers for building the descriptors.
+    let mut builder = {
+        static CONFIG_DESCRIPTOR: StaticCell<[u8; 256]> = StaticCell::new();
+        static BOS_DESCRIPTOR: StaticCell<[u8; 256]> = StaticCell::new();
+        static CONTROL_BUF: StaticCell<[u8; 64]> = StaticCell::new();
+
+        let builder = embassy_usb::Builder::new(
+            driver,
+            config,
+            CONFIG_DESCRIPTOR.init([0; 256]),
+            BOS_DESCRIPTOR.init([0; 256]),
+            &mut [], // no msos descriptors
+            CONTROL_BUF.init([0; 64]),
+        );
+        builder
+    };
+
+    // Create classes on the builder.
+    let mut serial = {
+        static STATE: StaticCell<State> = StaticCell::new();
+        let state = STATE.init(State::new());
+        CdcAcmClass::new(&mut builder, state, 64)
+    };
+
+    // Build the builder.
+    let usb = builder.build();
+
+    // Run the USB device.
+    unwrap!(spawner.spawn(usb_task(usb)));
 
     // --------------------------------------------------------------
 
-    #[cfg(any(feature = "uart0_debug"))]
-    let pins_id: [Option<DynPinId>; MAX_PINS] = [
-        None, // 0 debug uart
-        None, // 1 debug uart
-        Some(pins.gpio2.into_dyn_pin().id()),
-        Some(pins.gpio3.into_dyn_pin().id()),
-        Some(pins.gpio4.into_dyn_pin().id()),
-        Some(pins.gpio5.into_dyn_pin().id()),
-        Some(pins.gpio6.into_dyn_pin().id()),
-        Some(pins.gpio7.into_dyn_pin().id()),
-        Some(pins.gpio8.into_dyn_pin().id()),
-        Some(pins.gpio9.into_dyn_pin().id()),
-        Some(pins.gpio10.into_dyn_pin().id()),
-        Some(pins.gpio11.into_dyn_pin().id()),
-        Some(pins.gpio12.into_dyn_pin().id()),
-        Some(pins.gpio13.into_dyn_pin().id()),
-        Some(pins.gpio14.into_dyn_pin().id()),
-        Some(pins.gpio15.into_dyn_pin().id()),
-        Some(pins.gpio16.into_dyn_pin().id()),
-        Some(pins.gpio17.into_dyn_pin().id()),
-        Some(pins.gpio18.into_dyn_pin().id()),
-        Some(pins.gpio19.into_dyn_pin().id()),
-        Some(pins.gpio20.into_dyn_pin().id()),
-        Some(pins.gpio21.into_dyn_pin().id()),
-        Some(pins.gpio22.into_dyn_pin().id()),
-        None, // 23 Controls the on-board SMPS Power Save pin
-        None, // 24 VBUS sense - high if VBUS is present, else low
-        None, // 25 Connected to user LED
-        Some(pins.gpio26.into_dyn_pin().id()),
-        Some(pins.gpio27.into_dyn_pin().id()),
-        Some(pins.gpio28.into_dyn_pin().id()),
-	// 29 Used in ADC mode (ADC3) to measure VSYS/3
-    ];
     #[cfg(not(any(feature = "uart0_debug")))]
-    let pins_id: [Option<DynPinId>; MAX_PINS] = [
-        Some(pins.gpio0.into_dyn_pin().id()),
-        Some(pins.gpio1.into_dyn_pin().id()),
-        Some(pins.gpio2.into_dyn_pin().id()),
-        Some(pins.gpio3.into_dyn_pin().id()),
-        Some(pins.gpio4.into_dyn_pin().id()),
-        Some(pins.gpio5.into_dyn_pin().id()),
-        Some(pins.gpio6.into_dyn_pin().id()),
-        Some(pins.gpio7.into_dyn_pin().id()),
-        Some(pins.gpio8.into_dyn_pin().id()),
-        Some(pins.gpio9.into_dyn_pin().id()),
-        Some(pins.gpio10.into_dyn_pin().id()),
-        Some(pins.gpio11.into_dyn_pin().id()),
-        Some(pins.gpio12.into_dyn_pin().id()),
-        Some(pins.gpio13.into_dyn_pin().id()),
-        Some(pins.gpio14.into_dyn_pin().id()),
-        Some(pins.gpio15.into_dyn_pin().id()),
-        Some(pins.gpio16.into_dyn_pin().id()),
-        Some(pins.gpio17.into_dyn_pin().id()),
-        Some(pins.gpio18.into_dyn_pin().id()),
-        Some(pins.gpio19.into_dyn_pin().id()),
-        Some(pins.gpio20.into_dyn_pin().id()),
-        Some(pins.gpio21.into_dyn_pin().id()),
-        Some(pins.gpio22.into_dyn_pin().id()),
+    let mut pins: [Option<Flex>; MAX_PINS] = [
+        Some(Flex::new(p.PIN_0)),
+        Some(Flex::new(p.PIN_1)),
+        Some(Flex::new(p.PIN_2)),
+        Some(Flex::new(p.PIN_3)),
+        Some(Flex::new(p.PIN_4)),
+        Some(Flex::new(p.PIN_5)),
+        Some(Flex::new(p.PIN_6)),
+        Some(Flex::new(p.PIN_7)),
+        Some(Flex::new(p.PIN_8)),
+        Some(Flex::new(p.PIN_9)),
+        Some(Flex::new(p.PIN_10)),
+        Some(Flex::new(p.PIN_11)),
+        Some(Flex::new(p.PIN_12)),
+        Some(Flex::new(p.PIN_13)),
+        Some(Flex::new(p.PIN_14)),
+        Some(Flex::new(p.PIN_15)),
+        Some(Flex::new(p.PIN_16)),
+        Some(Flex::new(p.PIN_17)),
+        Some(Flex::new(p.PIN_18)),
+        Some(Flex::new(p.PIN_19)),
+        Some(Flex::new(p.PIN_20)),
+        Some(Flex::new(p.PIN_21)),
+        Some(Flex::new(p.PIN_22)),
         None, // 23 Controls the on-board SMPS Power Save pin
         None, // 24 VBUS sense - high if VBUS is present, else low
         None, // 25 Connected to user LED
-        Some(pins.gpio26.into_dyn_pin().id()),
-        Some(pins.gpio27.into_dyn_pin().id()),
-        Some(pins.gpio28.into_dyn_pin().id()),
-	// 29 Used in ADC mode (ADC3) to measure VSYS/3
+        Some(Flex::new(p.PIN_26)),
+        Some(Flex::new(p.PIN_27)),
+        Some(Flex::new(p.PIN_28)),
+        // 29 Used in ADC mode (ADC3) to measure VSYS/3
     ];
+
+    #[cfg(any(feature = "uart0_debug"))]
+    let mut pins: [Option<Flex>; MAX_PINS] = [
+        None,
+        None,
+        Some(Flex::new(p.PIN_2)),
+        Some(Flex::new(p.PIN_3)),
+        Some(Flex::new(p.PIN_4)),
+        Some(Flex::new(p.PIN_5)),
+        Some(Flex::new(p.PIN_6)),
+        Some(Flex::new(p.PIN_7)),
+        Some(Flex::new(p.PIN_8)),
+        Some(Flex::new(p.PIN_9)),
+        Some(Flex::new(p.PIN_10)),
+        Some(Flex::new(p.PIN_11)),
+        Some(Flex::new(p.PIN_12)),
+        Some(Flex::new(p.PIN_13)),
+        Some(Flex::new(p.PIN_14)),
+        Some(Flex::new(p.PIN_15)),
+        Some(Flex::new(p.PIN_16)),
+        Some(Flex::new(p.PIN_17)),
+        Some(Flex::new(p.PIN_18)),
+        Some(Flex::new(p.PIN_19)),
+        Some(Flex::new(p.PIN_20)),
+        Some(Flex::new(p.PIN_21)),
+        Some(Flex::new(p.PIN_22)),
+        None, // 23 Controls the on-board SMPS Power Save pin
+        None, // 24 VBUS sense - high if VBUS is present, else low
+        None, // 25 Connected to user LED
+        Some(Flex::new(p.PIN_26)),
+        Some(Flex::new(p.PIN_27)),
+        Some(Flex::new(p.PIN_28)),
+        // 29 Used in ADC mode (ADC3) to measure VSYS/3
+    ];
+
+    // Create the request processor and init all pin to input
+    let mut request_processor = DioRequestProcessor::new(&mut pins);
 
     let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =
         serial_line_ip::DecoderBuffer::new();
 
-    // Create the request processor and init all pin to input
-    let mut request_processor = DioRequestProcessor::new(&debug_uart, &pins_id);
-    request_processor.init_all_pins_as_input();
-
     loop {
+        let mut buf = [0u8; 512];
+        serial.wait_connection().await;
         // Check for new data
-        if usb_dev.poll(&mut [&mut serial]) {
-            let mut buf = [0u8; 512];
-            match serial.read(&mut buf) {
-                Err(_e) => {
-                    // Do nothing
-                }
-                Ok(0) => {
-                    // Do nothing
-                }
-                Ok(count) => {
-                    let mut data = &buf[..count];
-                    print_debug_message!(&debug_uart, b"========================\r\n");
-                    print_debug_message!(&debug_uart, "+ recieved: {:?}", data);
+        if let Ok(count) = serial.read_packet(&mut buf).await {
+            let mut data = &buf[..count];
+            print_debug_message!(b"========================\r\n");
+            print_debug_message!("+ recieved: {:?}", data);
 
-                    loop {
-                        // print_debug_message!(&debug_uart, b"1");
-                        // Check if we have enough data to decode
-                        match decode_buffer.feed(data) {
-                            Ok((nb_bytes_processed, found_trame_complete)) => {
-                                // print_debug_message!(&debug_uart, b"2");
-                                if found_trame_complete {
-                                    let trame = decode_buffer.slice();
-                                    if let Ok(request) = decode_api_request(&debug_uart, trame) {
-                                        print_debug_message!(
-                                            &debug_uart,
-                                            "+ process request: {:?}",
-                                            request
-                                        );
-                                        request_processor.process_request(&mut serial, &request);
-                                        decode_buffer.reset();
-                                        data = &buf[..count - nb_bytes_processed];
-                                    }
-                                } else {
-                                    // print_debug_message!(&debug_uart, b"3");
-                                    break;
-                                }
+            loop {
+                // print_debug_message!(b"1");
+                // Check if we have enough data to decode
+                match decode_buffer.feed(data) {
+                    Ok((nb_bytes_processed, found_trame_complete)) => {
+                        // print_debug_message!(b"2");
+                        if found_trame_complete {
+                            let trame = decode_buffer.slice();
+                            if let Ok(request) = decode_api_request(trame) {
+                                print_debug_message!("+ process request: {:?}", request);
+                                let _ = request_processor
+                                    .process_request(&mut serial, &request)
+                                    .await;
+                                decode_buffer.reset();
+                                data = &buf[..count - nb_bytes_processed];
                             }
-                            other => {
-                                print_debug_message!(&debug_uart, "{:?}", other);
-                                break;
-                            }
+                        } else {
+                            // print_debug_message!(b"3");
+                            break;
                         }
+                    }
+                    other => {
+                        print_debug_message!("{:?}", other);
+                        break;
                     }
                 }
             }
@@ -301,10 +256,7 @@ unsafe fn main() -> ! {
 
 /// Decode an API request
 ///
-fn decode_api_request<'a>(
-    debug_uart: &'a Option<UartType>,
-    frame: &'a [u8],
-) -> Result<PicohaDioRequest<'a>, DecodeError> {
+fn decode_api_request<'a>(frame: &'a [u8]) -> Result<PicohaDioRequest<'a>, DecodeError> {
     PicohaDioRequest::decode(frame)
         .and_then(|ppp| {
             let mut new_request = PicohaDioRequest::default();
@@ -314,25 +266,21 @@ fn decode_api_request<'a>(
             Ok(new_request)
         })
         .or_else(|e| {
-            print_debug_message!(&debug_uart, "      * error decoding request: {:?}", &e);
+            print_debug_message!("      * error decoding request: {:?}", &e);
             Err(e)
         })
 }
 
-use core::panic::PanicInfo;
-use core::sync::atomic::{self, Ordering};
+bind_interrupts!(struct Irqs {
+    USBCTRL_IRQ => InterruptHandler<USB>;
+});
 
-#[inline(never)]
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    //print_debug_message!(b"Panic!\r\n");
-    //let line = _info.location().unwrap().line();
-    //let file = _info.location().unwrap().file();
-    //print_debug_message!("panic {}:{}", file, line);
+type MyUsbDriver = Driver<'static, USB>;
+type MyUsbDevice = UsbDevice<'static, MyUsbDriver>;
 
-    loop {
-        atomic::compiler_fence(Ordering::SeqCst);
-    }
+#[embassy_executor::task]
+async fn usb_task(mut usb: MyUsbDevice) -> ! {
+    usb.run().await
 }
 
 // End of file

@@ -1,51 +1,37 @@
-#[cfg(any(feature = "uart0_debug"))]
-use bsp::hal::pac;
-#[cfg(any(feature = "uart0_debug"))]
-use rp2040_hal::uart::UartPeripheral;
-#[cfg(any(feature = "uart0_debug"))]
-use rp_pico as bsp;
-#[cfg(any(feature = "uart0_debug"))]
-use rp_pico::hal::gpio::Pin;
+use embassy_rp::peripherals;
+use embassy_rp::uart;
 
-#[cfg(not(feature = "uart0_debug"))]
-pub type UartType = ();
+pub type DebugUart<'d> = uart::Uart<'d, peripherals::UART0, uart::Blocking>;
 
-/// Type alias for the UART peripheral 0
-#[cfg(any(feature = "uart0_debug"))]
-pub type UartType = UartPeripheral<
-    rp2040_hal::uart::Enabled,
-    pac::UART0,
-    (
-        Pin<
-            rp2040_hal::gpio::bank0::Gpio0,
-            rp2040_hal::gpio::FunctionUart,
-            rp2040_hal::gpio::PullDown,
-        >,
-        Pin<
-            rp2040_hal::gpio::bank0::Gpio1,
-            rp2040_hal::gpio::FunctionUart,
-            rp2040_hal::gpio::PullDown,
-        >,
-    ),
->;
+static mut NONE: Option<DebugUart> = None;
+static mut UART_DEBUG: &mut Option<DebugUart> = unsafe { &mut NONE };
 
 #[cfg(any(feature = "uart0_debug"))]
-pub fn uart_debug_print(debug_uart: &Option<UartType>, data: &[u8]) {
-    if let Some(uart) = debug_uart.as_ref() {
-        uart.write_full_blocking(data);
+pub fn uart_debug_init(uart: &'static mut Option<DebugUart>) {
+    unsafe {
+        UART_DEBUG = uart;
+    }
+}
+
+#[cfg(any(feature = "uart0_debug"))]
+pub fn uart_debug_print(data: &[u8]) {
+    unsafe {
+        if let Some(uart) = UART_DEBUG.as_mut() {
+            let _ = uart.blocking_write(data);
+        }
     }
 }
 
 #[macro_export]
 #[cfg(not(any(feature = "uart0_debug")))]
 macro_rules! print_debug_message {
-    ($uart:expr, $fmt:expr) => {{}};
-    ($uart:expr, $fmt:expr, $arg0:expr) => {{
-        let _ = ($uart, $arg0);
+    ($fmt:expr) => {{}};
+    ($fmt:expr, $arg0:expr) => {{
+        let _ = ($arg0);
         ()
     }};
-    ($uart:expr, $fmt:expr, $arg0:expr, $arg1:expr) => {{
-        let _ = ($uart, $arg0, $arg1);
+    ($fmt:expr, $arg0:expr, $arg1:expr) => {{
+        let _ = ($arg0, $arg1);
         ()
     }};
 }
@@ -53,17 +39,17 @@ macro_rules! print_debug_message {
 #[macro_export]
 #[cfg(any(feature = "uart0_debug"))]
 macro_rules! print_debug_message {
-    ($uart:expr, $fmt:expr) => {{
-        crate::uart_debug_print($uart, $fmt);
+    ($fmt:expr) => {{
+        crate::uart_debug_print($fmt);
     }};
-    ($uart:expr, $fmt:expr, $arg0:expr) => {{
+    ($fmt:expr, $arg0:expr) => {{
         let mut debug_message = heapless::String::<512>::new();
         writeln!(&mut debug_message, $fmt, $arg0).unwrap();
-        crate::uart_debug_print($uart, debug_message.as_bytes());
+        crate::uart_debug_print(debug_message.as_bytes());
     }};
-    ($uart:expr, $fmt:expr, $arg0:expr, $arg1:expr) => {{
+    ($fmt:expr, $arg0:expr, $arg1:expr) => {{
         let mut debug_message = heapless::String::<512>::new();
         writeln!(&mut debug_message, $fmt, $arg0, $arg1).unwrap();
-        crate::uart_debug_print($uart, debug_message.as_bytes());
+        crate::uart_debug_print(debug_message.as_bytes());
     }};
 }
