@@ -7,7 +7,7 @@ Library      Collections
 Variables    platform_data.py
 
 # All Library must be imported here 
-Library      ../../libraries/gpio_keywords.py
+Library     gpio_keywords.py
 Library     platform_data.py
 
 *** Variables ***
