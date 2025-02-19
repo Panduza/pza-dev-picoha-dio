@@ -20,17 +20,7 @@ pub struct PicohaDioAnswer<'a> {
     #[femtopb(unknown_fields)]
     pub unknown_fields: femtopb::UnknownFields<'a>,
 }
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    PartialOrd,
-    Ord,
-    ::femtopb::Enumeration
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::femtopb::Enumeration)]
 #[repr(i32)]
 #[derive(Default)]
 pub enum RequestType {
@@ -46,6 +36,7 @@ impl RequestType {
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    #[allow(dead_code)]
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Ping => "PING",
@@ -56,6 +47,7 @@ impl RequestType {
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
+    #[allow(dead_code)]
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "PING" => Some(Self::Ping),
@@ -69,17 +61,7 @@ impl RequestType {
 }
 /// This structure should be splitted
 /// 1 for values and 1 for directions
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    PartialOrd,
-    Ord,
-    ::femtopb::Enumeration
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::femtopb::Enumeration)]
 #[repr(i32)]
 #[derive(Default)]
 pub enum PinValue {
@@ -94,6 +76,7 @@ impl PinValue {
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    #[allow(dead_code)]
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Low => "LOW",
@@ -103,6 +86,7 @@ impl PinValue {
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
+    #[allow(dead_code)]
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "LOW" => Some(Self::Low),
@@ -113,17 +97,7 @@ impl PinValue {
         }
     }
 }
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    PartialOrd,
-    Ord,
-    ::femtopb::Enumeration
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::femtopb::Enumeration)]
 #[repr(i32)]
 #[derive(Default)]
 pub enum AnswerType {
@@ -136,6 +110,7 @@ impl AnswerType {
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    #[allow(dead_code)]
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Success => "SUCCESS",
@@ -143,6 +118,7 @@ impl AnswerType {
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
+    #[allow(dead_code)]
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "SUCCESS" => Some(Self::Success),

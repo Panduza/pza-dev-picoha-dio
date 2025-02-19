@@ -1,14 +1,13 @@
 // Print debug support
-use crate::api_dio_utils;
-#[cfg(any(feature = "uart0_debug"))]
-use crate::uart_debug::uart_debug_print;
+use crate::uart_debug::UartType;
 use crate::{
     api_dio::{PicohaDioAnswer, PicohaDioRequest},
     print_debug_message,
 };
+#[cfg(any(feature = "uart0_debug"))]
 use core::fmt::Write;
 
-use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
+use embedded_hal::digital::{InputPin, OutputPin};
 use rp2040_hal::gpio::new_pin;
 // Message deserialization support
 use femtopb::Message;
@@ -17,216 +16,183 @@ use rp2040_hal::gpio::DynPinId;
 // USB Communications Class Device support
 use usbd_serial::SerialPort;
 
-const MAX_PINS: usize = 23;
+use crate::MAX_PINS;
 
-type PinO = rp2040_hal::gpio::Pin<
-    rp2040_hal::gpio::DynPinId,
-    rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioOutput>,
-    rp2040_hal::gpio::DynPullType,
->;
-const PINO_NONE: Option<PinO> = None;
-type PinI = rp2040_hal::gpio::Pin<
-    rp2040_hal::gpio::DynPinId,
-    rp2040_hal::gpio::FunctionSio<rp2040_hal::gpio::SioInput>,
-    rp2040_hal::gpio::DynPullType,
->;
-const PINI_NONE: Option<PinI> = None;
-
+#[derive(PartialEq)]
 enum PinDirection {
-    input,
-    output,
+    Input = 0,
+    Output = 1,
 }
+
+#[derive(PartialEq)]
 enum PinValue {
-    low,
-    high,
+    Low = 0,
+    High = 1,
 }
+
+struct Pin {
+    id: Option<DynPinId>,
+    direction: PinDirection,
+    value: PinValue,
+}
+
+const DEFAULT_PIN: Pin = Pin {
+    id: None,
+    direction: PinDirection::Input,
+    value: PinValue::Low,
+};
 
 /// Application Digital I/O
-pub struct DioRequestProcessor {
-    pins_id: [Option<DynPinId>; MAX_PINS],
-    pins_o: [Option<PinO>; MAX_PINS],
-    pins_i: [Option<PinI>; MAX_PINS],
+pub struct DioRequestProcessor<'a> {
+    debug_uart: &'a Option<UartType>,
+    pins: [Pin; MAX_PINS],
 }
 
-impl DioRequestProcessor {
+impl<'a> DioRequestProcessor<'a> {
     /// Create a new instance of the DioRequestProcessor
     ///
-    pub fn new(pins_id: [Option<DynPinId>; MAX_PINS]) -> Self {
-        DioRequestProcessor {
-            pins_id: pins_id,
-            pins_o: [PINO_NONE; MAX_PINS],
-            pins_i: [PINI_NONE; MAX_PINS],
+    pub fn new(
+        debug_uart: &'a Option<UartType>,
+        pins_id: &'a [Option<DynPinId>; MAX_PINS],
+    ) -> Self {
+        let mut processor = DioRequestProcessor {
+            debug_uart: debug_uart,
+            pins: [DEFAULT_PIN; MAX_PINS],
+        };
+
+        for (idx, pin_id) in pins_id.iter().enumerate() {
+            processor.pins[idx].id = *pin_id;
         }
+
+        processor
     }
 
     ///
     /// Initialize all pins as input
     ///
     pub fn init_all_pins_as_input(&mut self) {
-        for n in 0..MAX_PINS {
-            self.set_pin_as_input(n);
+        for idx in 0..self.pins.len() {
+            let _ = self.set_pin_as_input(idx as u32);
         }
-    }
-
-    /// Check internal configuration to get the pin direction configuration
-    ///
-    fn get_internal_pin_direction(&self, pin: usize) -> Option<PinDirection> {
-        // Debug
-        // print_debug_message!("? check pin {:?}\r\n", pin);
-
-        // if pin is in the output array, it is configured as output
-        if self.pins_o[pin].is_some() {
-            return Some(PinDirection::output);
-        }
-
-        // if pin is in the input array, it is configured as input
-        if self.pins_i[pin].is_some() {
-            return Some(PinDirection::input);
-        }
-
-        // else not configured yet
-        // print_debug_message!(b"? not configured\r\n");
-        None
-    }
-
-    /// Check internal configuration to get the pin direction configuration
-    ///
-    fn get_internal_pin_value(&mut self, pin: usize) -> Option<PinValue> {
-        // Debug
-        print_debug_message!("? check pin {:?}\r\n", pin);
-
-        let dir = self.get_internal_pin_direction(pin);
-        match dir {
-            Some(d) => match d {
-                PinDirection::input => {
-                    let pin_obj = &mut self.pins_i[pin];
-                    if let Some(pin_obj) = pin_obj {
-                        match pin_obj.is_high() {
-                            Ok(true) => return Some(PinValue::high),
-                            Ok(false) => return Some(PinValue::low),
-                            Err(_) => {} // Infalible
-                        }
-                    }
-                }
-                PinDirection::output => {
-                    print_debug_message!(b"      * output ?\r\n");
-                    let pin_obj = &mut self.pins_o[pin];
-                    if let Some(pin_obj) = pin_obj {
-                        match pin_obj.is_set_high() {
-                            Ok(true) => return Some(PinValue::high),
-                            Ok(false) => return Some(PinValue::low),
-                            Err(_) => {} // Infalible
-                        }
-                    }
-                }
-            },
-            None => {
-                return None;
-            }
-        }
-
-        // else not configured yet
-        // print_debug_message!(b"? not configured\r\n");
-        None
     }
 
     /// Set a pin as output
     ///
-    fn set_pin_as_output(&mut self, pin_num: usize) {
-        print_debug_message!("\tset pin {:?} as output", pin_num);
-        self.pins_id[pin_num as usize]
-            .map(|dyn_id| unsafe {
+    fn set_pin_as_output(&mut self, pin_num: u32) -> Result<(), &'static str> {
+        print_debug_message!(self.debug_uart, "\tset pin {:?} as output", pin_num);
+        if let Some(dyn_id) = self.pins[pin_num as usize].id {
+            unsafe {
                 let pin = new_pin(dyn_id);
                 pin.try_into_function::<rp2040_hal::gpio::FunctionSioOutput>()
-                    .and_then(|pin_out| {
-                        //
-                        // Remove pin from ouput array if it is there
-                        self.pins_i[pin_num] = None;
-
-                        self.pins_o[pin_num as usize] = Some(pin_out);
+                    .and_then(|mut pin_out| {
+                        let _ = pin_out.set_low();
+                        self.pins[pin_num as usize].direction = PinDirection::Output;
                         Ok(())
                     })
-                    // Ignore the error, just a warning
-                    .map_err(|_| {
+                    .or_else(|_| {
                         print_debug_message!(
+                            self.debug_uart,
                             "      * error converting pin {:?} to output",
                             pin_num
                         );
-                    })
-                    .ok();
-            })
-            // Ignore the error, just a warning
-            .ok_or_else(|| {
-                print_debug_message!("      * pin {:?} not available", pin_num);
-            })
-            .ok();
+                        Err("Set output failed")
+                    })?;
+            }
+        };
+
+        Ok(())
     }
 
     /// Set a pin as input
     ///
-    fn set_pin_as_input(&mut self, pin_num: usize) {
-        //
-        // Debug log
-        print_debug_message!("\tset pin {:?} as input", pin_num);
+    fn set_pin_as_input(&mut self, pin_num: u32) -> Result<(), &'static str> {
+        print_debug_message!(self.debug_uart, "\tset pin {:?} as input", pin_num);
 
-        //
-        // Set the pin as input
-        self.pins_id[pin_num as usize]
-            .map(|dyn_id| unsafe {
+        if let Some(dyn_id) = self.pins[pin_num as usize].id {
+            unsafe {
                 let pin = new_pin(dyn_id);
                 pin.try_into_function::<rp2040_hal::gpio::FunctionSioInput>()
                     .and_then(|mut pin_in| {
-                        //
-                        // Remove pin from ouput array if it is there
-                        self.pins_o[pin_num] = None;
-
-                        // pin_in.set_pull_type(rp2040_hal::gpio::DynPullType::None);
                         pin_in.set_pull_type(rp2040_hal::gpio::DynPullType::Down);
-                        self.pins_i[pin_num as usize] = Some(pin_in);
+                        self.pins[pin_num as usize].direction = PinDirection::Input;
                         Ok(())
                     })
-                    // Ignore the error, just a warning
-                    .map_err(|_| {
-                        print_debug_message!("      * error converting pin {:?} to input", pin_num);
-                    })
-                    .ok();
-            })
-            // Ignore the error, just a warning
-            .ok_or_else(|| {
-                print_debug_message!("      * pin {:?} not available", pin_num);
-            })
-            .ok();
+                    .or_else(|_| {
+                        print_debug_message!(
+                            self.debug_uart,
+                            "      * error converting pin {:?} to input",
+                            pin_num
+                        );
+                        Err("Set input failed")
+                    })?;
+            }
+        }
+
+        Ok(())
     }
 
     /// Set a pin low
     ///
     fn set_pin_low(&mut self, pin_num: u32) -> Result<(), &'static str> {
-        print_debug_message!("\t+pin {:?} low", pin_num);
-        self.pins_o[pin_num as usize]
-            .as_mut()
-            .map(|pin| {
-                pin.set_low().unwrap();
-            })
-            .ok_or_else(|| {
-                print_debug_message!("\t!!!pin {:?} not available", pin_num);
-                "Pin not available"
-            })?;
+        if self.pins[pin_num as usize].direction != PinDirection::Output {
+            print_debug_message!(self.debug_uart, "\tError: pin {:?} is input", pin_num);
+            return Err("Pin is input");
+        }
+
+        print_debug_message!(self.debug_uart, "\t+pin {:?} low", pin_num);
+        if let Some(dyn_id) = self.pins[pin_num as usize].id {
+            unsafe {
+                let pin = new_pin(dyn_id);
+                pin.try_into_function::<rp2040_hal::gpio::FunctionSioOutput>()
+                    .and_then(|mut pin_out| {
+                        let _ = pin_out.set_low();
+                        self.pins[pin_num as usize].value = PinValue::Low;
+                        Ok(())
+                    })
+                    .or_else(|_| {
+                        print_debug_message!(
+                            self.debug_uart,
+                            "\t!!!pin {:?} not available",
+                            pin_num
+                        );
+                        Err("Unable to set pin as low")
+                    })?;
+            }
+        }
+
         Ok(())
     }
 
     /// Set a pin high
     ///
     fn set_pin_high(&mut self, pin_num: u32) -> Result<(), &'static str> {
-        print_debug_message!("\t+pin {:?} high", pin_num);
-        self.pins_o[pin_num as usize]
-            .as_mut()
-            .map(|pin| {
-                pin.set_high().unwrap();
-            })
-            .ok_or_else(|| {
-                print_debug_message!("\t!!!pin {:?} not available", pin_num);
-                "Pin not available"
-            })?;
+        if self.pins[pin_num as usize].direction != PinDirection::Output {
+            print_debug_message!(self.debug_uart, "\tError: pin {:?} is input", pin_num);
+
+            return Err("Pin is input");
+        }
+
+        print_debug_message!(self.debug_uart, "\t+pin {:?} low", pin_num);
+        if let Some(dyn_id) = self.pins[pin_num as usize].id {
+            unsafe {
+                let pin = new_pin(dyn_id);
+                pin.try_into_function::<rp2040_hal::gpio::FunctionSioOutput>()
+                    .and_then(|mut pin_out| {
+                        let _ = pin_out.set_high();
+                        self.pins[pin_num as usize].value = PinValue::High;
+                        Ok(())
+                    })
+                    .or_else(|_| {
+                        print_debug_message!(
+                            self.debug_uart,
+                            "\t!!!pin {:?} not available",
+                            pin_num
+                        );
+                        Err("Unable to set pin as high")
+                    })?;
+            }
+        }
+
         Ok(())
     }
 
@@ -235,234 +201,266 @@ impl DioRequestProcessor {
     pub fn process_request(
         &mut self,
         serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
-        request: PicohaDioRequest,
+        request: &PicohaDioRequest,
     ) {
         //
         // Debug log
-        print_debug_message!("+ processing request: {:?}", request);
+        print_debug_message!(self.debug_uart, "+ processing request: {:?}", request);
+
+        // Default response
+        let mut answer = PicohaDioAnswer::default();
+        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+
+        // Check pin index
+        if let femtopb::EnumValue::Known(req_type) = request.r#type {
+            if req_type != crate::api_dio::RequestType::Ping {
+                if request.pin_num >= self.pins.len() as u32
+                    || self.pins[request.pin_num as usize].id.is_none()
+                {
+                    print_debug_message!(self.debug_uart, "\tInvalid pin {:?}", request.pin_num);
+
+                    answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                    answer.error_message = Some("Invalid pin");
+                    let _ = self.send_answer(serial, &mut answer);
+                    return;
+                }
+            }
+        }
 
         //
         // Choose the correct process function
-        match request.r#type {
+        let r = match request.r#type {
             femtopb::EnumValue::Known(k) => match k {
-                crate::api_dio::RequestType::Ping => Self::process_request_ping(serial),
+                crate::api_dio::RequestType::Ping => self.process_request_ping(&mut answer),
                 crate::api_dio::RequestType::SetPinDirection => {
-                    self.process_request_set_pin_direction(serial, request)
+                    self.process_request_set_pin_direction(request, &mut answer)
                 }
                 crate::api_dio::RequestType::SetPinValue => {
-                    self.process_request_set_pin_value(serial, request)
+                    self.process_request_set_pin_value(request, &mut answer)
                 }
                 crate::api_dio::RequestType::GetPinDirection => {
-                    self.process_request_get_pin_direction(serial, request)
+                    self.process_request_get_pin_direction(request, &mut answer)
                 }
                 crate::api_dio::RequestType::GetPinValue => {
-                    self.process_request_get_pin_value(serial, request)
+                    self.process_request_get_pin_value(request, &mut answer)
                 }
             },
-            femtopb::EnumValue::Unknown(_) => todo!(),
-        }
+            femtopb::EnumValue::Unknown(_) => Err("Invalid value"),
+        };
+
+        let _ = r.or_else(|e| {
+            answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+            answer.error_message = Some(e);
+            Err(e)
+        });
+
+        let _ = self.send_answer(serial, &mut answer);
     }
 
     /// Process a ping request
     ///
-    fn process_request_ping(serial: &mut SerialPort<rp2040_hal::usb::UsbBus>) {
-        print_debug_message!(b"\t* processing request: PING\r\n");
-        let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-        Self::send_answer(serial, answer);
+    fn process_request_ping(&self, _answer: &mut PicohaDioAnswer) -> Result<(), &'static str> {
+        print_debug_message!(self.debug_uart, b"\t* processing request: PING\r\n");
+        Ok(())
     }
 
     /// Process a set pin direction request
     ///
     fn process_request_set_pin_direction(
         &mut self,
-        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
-        request: PicohaDioRequest,
-    ) {
-        print_debug_message!(b"      * processing request: SET_PIN_DIRECTION\r\n");
+        request: &PicohaDioRequest,
+        _answer: &mut PicohaDioAnswer,
+    ) -> Result<(), &'static str> {
+        print_debug_message!(
+            self.debug_uart,
+            b"      * processing request: SET_PIN_DIRECTION\r\n"
+        );
 
         match request.value {
             femtopb::EnumValue::Known(v) => match v {
-                crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num as usize),
-                crate::api_dio::PinValue::Output => {
-                    self.set_pin_as_output(request.pin_num as usize)
-                }
+                crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num),
+                crate::api_dio::PinValue::Output => self.set_pin_as_output(request.pin_num),
                 _ => {
-                    print_debug_message!("      * invalid value: {:?}", v);
+                    print_debug_message!(self.debug_uart, "      * invalid value: {:?}", v);
+                    Err("Invalid value")
                 }
             },
-            femtopb::EnumValue::Unknown(_) => todo!(),
+            femtopb::EnumValue::Unknown(_) => Err("Invalid value"),
         }
-
-        let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-        Self::send_answer(serial, answer);
     }
 
     /// Process a set pin value request
     ///
     fn process_request_set_pin_value(
         &mut self,
-        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
-        request: PicohaDioRequest,
-    ) {
+        request: &PicohaDioRequest,
+        _answer: &mut PicohaDioAnswer,
+    ) -> Result<(), &'static str> {
         //
         // Debug log
-        print_debug_message!(b"\tprocessing request: SET_PIN_VALUE\r\n");
+        print_debug_message!(self.debug_uart, b"\tprocessing request: SET_PIN_VALUE\r\n");
 
         //
         // Process the request
-        let r = match request.value {
+        match request.value {
             femtopb::EnumValue::Known(v) => match v {
                 crate::api_dio::PinValue::Low => self.set_pin_low(request.pin_num),
                 crate::api_dio::PinValue::High => self.set_pin_high(request.pin_num),
                 _ => {
-                    print_debug_message!("\t!!! invalid value: {:?}", v);
+                    print_debug_message!(self.debug_uart, "      * invalid value: {:?}", v);
                     Err("Invalid value")
                 }
             },
-            femtopb::EnumValue::Unknown(_) => todo!(),
-        };
-
-        let mut answer = PicohaDioAnswer::default();
-        match r {
-            Ok(_) => {
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-            }
-            Err(e) => {
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
-                answer.error_message = Some(e);
-            }
+            femtopb::EnumValue::Unknown(_) => Err("Invalid value"),
         }
-        Self::send_answer(serial, answer);
     }
 
     ///
     /// This function process an incoming request to get a pin direction
     ///
     fn process_request_get_pin_direction(
-        &mut self,
-        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
-        request: PicohaDioRequest,
-    ) {
+        &self,
+        request: &PicohaDioRequest,
+        answer: &mut PicohaDioAnswer,
+    ) -> Result<(), &'static str> {
         // Debug log
-        print_debug_message!(b"      * processing request: GET_PIN_DIRECTION\r\n");
+        print_debug_message!(
+            self.debug_uart,
+            b"      * processing request: GET_PIN_DIRECTION\r\n"
+        );
 
-        // Prepare a default answer
-        let mut answer = PicohaDioAnswer::default();
-
-        // Fill the return message
-        // Success if the pin has a direction set
-        // Failure if the pin is not already configured
-        match self.get_internal_pin_direction(request.pin_num as usize) {
-            Some(direction) => {
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-                match direction {
-                    PinDirection::input => {
-                        print_debug_message!(b"      * input\r\n");
-                        answer.value =
-                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
-                    }
-                    PinDirection::output => {
-                        print_debug_message!(b"      * output\r\n");
-                        answer.value =
-                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
-                    }
-                }
+        match self.pins[request.pin_num as usize].direction {
+            PinDirection::Input => {
+                print_debug_message!(self.debug_uart, b"      * input\r\n");
+                answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
             }
-            None => {
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+            PinDirection::Output => {
+                print_debug_message!(self.debug_uart, b"      * output\r\n");
+                answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
             }
         }
 
-        // Send back the message
-        Self::send_answer(serial, answer);
+        Ok(())
     }
 
     fn process_request_get_pin_value(
-        &mut self,
-        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
-        request: PicohaDioRequest,
-    ) {
+        &self,
+        request: &PicohaDioRequest,
+        answer: &mut PicohaDioAnswer,
+    ) -> Result<(), &'static str> {
         //
         // Debug log
-        print_debug_message!(b"      * processing request: GET_PIN_VALUE\r\n");
+        print_debug_message!(
+            self.debug_uart,
+            b"      * processing request: GET_PIN_VALUE\r\n"
+        );
 
-        //
-        // Prepare a default answer
-        let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        match self.pins[request.pin_num as usize].direction {
+            PinDirection::Input => {
+                if let Some(dyn_id) = self.pins[request.pin_num as usize].id {
+                    unsafe {
+                        let pin = new_pin(dyn_id);
+                        pin.try_into_function::<rp2040_hal::gpio::FunctionSioInput>()
+                            .and_then(|mut pin_in| {
+                                match pin_in.is_high() {
+                                    Ok(true) => {
+                                        print_debug_message!(self.debug_uart, b"      * high\r\n");
+                                        answer.value = Some(femtopb::EnumValue::Known(
+                                            crate::api_dio::PinValue::High,
+                                        ));
+                                    }
+                                    Ok(false) => {
+                                        print_debug_message!(self.debug_uart, b"      * low\r\n");
+                                        answer.value = Some(femtopb::EnumValue::Known(
+                                            crate::api_dio::PinValue::Low,
+                                        ));
+                                    }
+                                    Err(_) => {} // Infaillible
+                                }
+                                Ok(())
+                            })
+                            .or_else(|_| {
+                                print_debug_message!(
+                                    self.debug_uart,
+                                    "      * error converting pin {:?} to input",
+                                    request.pin_num
+                                );
 
-        //
-        // Fill the return message
-        match self.get_internal_pin_value(request.pin_num as usize) {
-            Some(val) => {
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
-                match val {
-                    PinValue::low => {
-                        print_debug_message!(b"      * low\r\n");
-                        answer.value =
-                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Low));
-                    }
-                    PinValue::high => {
-                        print_debug_message!(b"      * high\r\n");
-                        answer.value =
-                            Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::High));
+                                Err("Set input failed")
+                            })?;
                     }
                 }
             }
-            None => {
-                answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
-            }
-        }
+            PinDirection::Output => match self.pins[request.pin_num as usize].value {
+                PinValue::Low => {
+                    print_debug_message!(self.debug_uart, b"      * low\r\n");
+                    answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Low));
+                }
+                PinValue::High => {
+                    print_debug_message!(self.debug_uart, b"      * high\r\n");
+                    answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::High));
+                }
+            },
+        };
 
-        //
-        // Send back the message
-        Self::send_answer(serial, answer);
+        Ok(())
     }
 
     /// Send an answer
     ///
-    fn send_answer(serial: &mut SerialPort<rp2040_hal::usb::UsbBus>, answer: PicohaDioAnswer) {
+    fn send_answer(
+        &self,
+        serial: &mut SerialPort<rp2040_hal::usb::UsbBus>,
+        answer: &PicohaDioAnswer,
+    ) -> Result<(), u32> {
         let mut buffer = [0u8; 64];
         let encoded_len = answer.encoded_len();
-        answer.encode(&mut buffer.as_mut()).unwrap();
+        answer.encode(&mut buffer.as_mut()).or_else(|e| {
+            print_debug_message!(self.debug_uart, "      * error encoding answer: {:?}", e);
+            Err(1 as u32)
+        })?;
 
-        print_debug_message!("      * answer: {:?}", answer);
-        // print_debug_message!("      * sending answer: {:?}", encoded_len);
-        // print_debug_message!("      * sending answer: {:?}", &buffer[..encoded_len]);
+        print_debug_message!(self.debug_uart, "      * answer: {:?}", answer);
+        // print_debug_message!(self.debug_uart, "      * sending answer: {:?}", encoded_len);
+        // print_debug_message!(self.debug_uart, "      * sending answer: {:?}", &buffer[..encoded_len]);
 
         // Prepare encoding
         let mut encoded_command = [0u8; 1024];
         let mut slip_encoder = serial_line_ip::Encoder::new();
 
         // Encode the command
-        let mut totals = match slip_encoder.encode(&buffer[..encoded_len], &mut encoded_command) {
-            Ok(t) => t,
-            Err(e) => {
-                print_debug_message!("      * error encoding answer: {:?}", e);
-                return;
-            }
-        };
+        let mut totals = slip_encoder
+            .encode(&buffer[..encoded_len], &mut encoded_command)
+            .or_else(|e| {
+                print_debug_message!(self.debug_uart, "      * error encoding answer: {:?}", e);
+                Err(2 as u32)
+            })?;
 
         // Finalise the encoding
-        totals += match slip_encoder.finish(&mut encoded_command[totals.written..]) {
-            Ok(t) => t,
-            Err(e) => {
-                print_debug_message!("      * error encoding answer: {:?}", e);
-                return;
-            }
-        };
+        totals += slip_encoder
+            .finish(&mut encoded_command[totals.written..])
+            .or_else(|e| {
+                print_debug_message!(self.debug_uart, "      * error encoding answer: {:?}", e);
+                Err(3 as u32)
+            })?;
 
-        // print_debug_message!("      * sending answer: {:?}", totals.written);
+        // print_debug_message!(self.debug_uart, "      * sending answer: {:?}", totals.written);
         print_debug_message!(
+            self.debug_uart,
             "      * sending answer: {:?}",
             &encoded_command[..totals.written]
         );
 
-        match serial.write(&encoded_command[..totals.written]) {
-            Ok(_) => print_debug_message!(b"      * answer sent\r\n"),
-            Err(e) => print_debug_message!("      * answer not sent {:?}", e),
+        let res = serial.write(&encoded_command[..totals.written]);
+        match res {
+            Ok(_) => {
+                print_debug_message!(self.debug_uart, b"      * answer sent\r\n");
+                Ok(())
+            }
+            Err(e) => {
+                print_debug_message!(self.debug_uart, "      * answer not sent {:?}", e);
+                Err(4 as u32)
+            }
         }
     }
 }

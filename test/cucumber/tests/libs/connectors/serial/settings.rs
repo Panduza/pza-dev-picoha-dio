@@ -183,8 +183,8 @@ impl Settings {
         self
     }
 
-    // pub fn set_time_lock_duration(mut self, time_lock_duration: Duration) -> Self {
-    //     self.time_lock_duration = Some(time_lock_duration);
-    //     self
-    // }
+    pub fn set_time_lock_duration(mut self, time_lock_duration: Duration) -> Self {
+        self.time_lock_duration = Some(time_lock_duration);
+        self
+    }
 }
