@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Launcher Python tests. 
-Decorator to manage python test and usefull fonction are discribe here.
+Decorator to manage python test and useful function are describe here.
 """
 
 import __future__
