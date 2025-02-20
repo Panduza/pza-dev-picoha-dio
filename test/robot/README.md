@@ -71,14 +71,20 @@ By the way, if your are not using python on some other project... Go see https:/
 
 ## SETUP
 
+### Advice
+
+To avoid future conflicts in import modules, we recommend creating a Virtual Environment: Venv.
+
+To do so in VS Code, follow documentation [here](https://code.visualstudio.com/docs/python/environments#_creating-environments).
+
 ### Prerequisites
 
-In order to use this systeme you shall install few module python : [PROTOBUF](https://protobuf.dev/) and [SLIP](https://sliplib.readthedocs.io/en/develop/module.html#module-sliplib.slip).
+In order to use this system you shall install few module python : [PROTOBUF](https://protobuf.dev/) and [SLIP](https://sliplib.readthedocs.io/en/develop/module.html#module-sliplib.slip).
 You can install their using : 
 
-```python install -r requierement.txt```.
+```python install -r requirement.txt```.
 
-You shall use the same PROTOBUF version as [api_dio_pb2.py](./libraries/api_dio_pb2.py) file. Thie file was previously genereted from [api_dio.proto](../../firmware/src/api_dio.proto).
+You shall use the same PROTOBUF version as [api_dio_pb2.py](./libraries/api_dio_pb2.py) file. This file was previously generated from [api_dio.proto](../../firmware/src/api_dio.proto).
 
 Here ```Protobuf Python Version: 5.28.0```
 
@@ -86,22 +92,22 @@ Here ```Protobuf Python Version: 5.28.0```
 
 You will need an Raspberry Pico with Panduza Firmware flashed.
 
-To simplified testing we connecte GPIOs by pair, link so:
+To simplified testing we connect GPIOs by pair, like so:
 
 ![PicoBenchSetup](./images/PicoBenchSetup.png)
 
- - GPIO 0 and 1 a reserved for debbug
+ - GPIO 0 and 1 a reserved for debug
  - GPIO 2 with GPIO 3, 4 with 5 and so one
- - there is one exeption: GPIO 25 is buildin LED 
+ - there is one exception: GPIO 25 is builtin LED 
 
-## Run campaine test
+## Run campagne test
 
-Use a ['Robot Framework Test Suite'](./tests/) to run a test campaine with robot. If you used [requierement.txt](requirements.txt), Robot is already insalled.
+Use a ['Robot Framework Test Suite'](./tests/) to run a test campagne with robot. If you used [requirement.txt](requirements.txt), Robot is already installed.
 
-Exemple :
+Example :
 ```
 cd ./tests
 robot Test_Suite_GPIO.robot
 ```
 
-Note: Check communication port number on your device management and put it on [platform.resource](./platform/RaspberryPico/platform.resource)
+Note: Check communication port number on your device management and put it on [config_file.ini](./platform/RaspberryPico/config_file.ini)

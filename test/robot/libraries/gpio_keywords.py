@@ -16,43 +16,45 @@ def test_that_nothing_is_good_too():
 
 
 # ==============================================
-test = None
+_test = None
 
 
-def connect_to(COM: str = "COM4"):
-    """Connect on Serial Port: COM"""
-    global test
+def connect_to_dut(port_com_dut: str):
+    """Connect on Serial Port COM"""
+    global _test
     try:
-        if test:
-            test.__del__()
-        test = PicoHostAdapterDio(COM)
+        if _test:
+            _test.__del__()
+        _test = PicoHostAdapterDio(port_com_dut)
     except SyntaxError as err:
         raise SyntaxError(f"{err}")
     except:
-        raise Exception(f"Imposible to create object PicoHost Adapter Dio on {COM}")
+        raise Exception(
+            f"Impossible to create object PicoHost Adapter Dio on {port_com_dut}"
+        )
 
 
 def disconnect():
     """Closed Serial Port connection"""
     try:
-        test.__del__()
+        _test.__del__()
     except SyntaxError as err:
         raise SyntaxError(f"{err}")
     except:
-        raise Exception(f"Imposible to delete object PicoHost Adapter Dio")
+        raise Exception(f"Impossible to delete object PicoHost Adapter Dio")
 
 
 def is_connected():
     """Check connection on Serial Port"""
     try:
-        return "true" if test.is_connected() else "false"
+        return "true" if _test.is_connected() else "false"
     except:
         raise Exception("Fail to connect product.")
 
 
 def ping():
     """Send Ping frame"""
-    ping_info = test.ping_info()
+    ping_info = _test.ping_info()
     if ping_info != dio.AnswerType.SUCCESS:
         raise ValueError("Not able to get a PING answer.")
 
@@ -60,9 +62,9 @@ def ping():
 def set_gpio_direction(gpio: int, direction: dio.PinValue):
     """Set GPIO direction"""
     if direction == "INPUT":
-        err = test.set_gpio_direction(gpio, dio.PinValue.INPUT)
+        err = _test.set_gpio_direction(gpio, dio.PinValue.INPUT)
     elif direction == "OUTPUT":
-        err = test.set_gpio_direction(gpio, dio.PinValue.OUTPUT)
+        err = _test.set_gpio_direction(gpio, dio.PinValue.OUTPUT)
     else:
         raise ValueError(f"This is not Direction value : {direction}")
     if err == dio.AnswerType.SUCCESS:
@@ -74,7 +76,7 @@ def set_gpio_direction(gpio: int, direction: dio.PinValue):
 
 def get_gpio_direction(gpio: int):
     """Return the GPIO direction"""
-    direction = test.get_gpio_direction(gpio)
+    direction = _test.get_gpio_direction(gpio).value
     if direction == dio.PinValue.INPUT:
         return "INPUT"
     elif direction == dio.PinValue.OUTPUT:
@@ -85,7 +87,7 @@ def get_gpio_direction(gpio: int):
 
 def set_gpio_value(gpio: int, value):
     """Set GPIO direction"""
-    if test.set_gpio_value(gpio, value) == dio.AnswerType.SUCCESS:
+    if _test.set_gpio_value(gpio, value) == dio.AnswerType.SUCCESS:
         return "SUCCESS"
     else:
         logging.warning(f"FAIL to set gpio value")
@@ -94,7 +96,7 @@ def set_gpio_value(gpio: int, value):
 
 def get_gpio_value(gpio: int):
     """Return GPIO direction"""
-    value = test.get_gpio_value(gpio)
+    value = _test.get_gpio_value(gpio).value
     if value == dio.PinValue.LOW:
         return "LOW"
     elif value == dio.PinValue.HIGH:
@@ -114,7 +116,7 @@ def check_gpio_direction(gpio: int, direction: str):
 def check_gpio_value(gpio: int, value):
     """Verified for a given GPIO than its value is set by reading the input on its paired GPIO"""
     if not get_gpio_value(gpio) == value:
-        raise ValueError(f"GPIO '{gpio} is not set as {value}")
+        raise ValueError(f"GPIO '{gpio}' is not set as {value}")
     else:
         return True
 

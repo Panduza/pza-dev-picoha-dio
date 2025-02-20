@@ -7,40 +7,39 @@ Library      Collections
 Variables    platform_data.py
 
 # All Library must be imported here 
-Library      ../../libraries/gpio_keywords.py
+Library     gpio_keywords.py
 Library     platform_data.py
 
 *** Variables ***
 ${Status_Last_CMD} =    None
-${COM} =     COM4
 
 *** Keywords ***
 
 Main Test Platform Setup
-    [Documentation]    Prepare testing environement
-    Set Log Level    DEBUG
-    Connect to    ${COM} 
+    [Documentation]    Prepare testing environment
+    Set Log Level    TRACE
+    Connect To Dut    ${PORT_COM_DUT}
     Log     "RaspberryPico Setup"
 
 Main Test Platform Cleanup
-    [Documentation]    Clean testing environement
+    [Documentation]    Clean testing environment
     Disconnect
     Log     "RaspberryPico Cleanup"
 
 
 # Keywords can be place in other files to organize the code
 a system that is correctly initialized
-    [Documentation]    Check the systeme is correctly initialized
+    [Documentation]    Check the system is correctly initialized
     is connected
     ping
     Log                 "system is initialized"
 
 communication working
-    [Documentation]    Send Ping commend
+    [Documentation]    Send Ping command
     ${ping}    ping
    
 the system is asked to set @{GPIOs_list} as "${direction}"
-    [Documentation]    Set GPIOs and its paire to direction 
+    [Documentation]    Set GPIOs and its pair to direction 
     ...                - GPIOs_list : list of int 
     ...                - direction : string [ INPUT / OUTPUT ]
     FOR    ${gpio}   IN    @{GPIOs_list}
@@ -80,7 +79,7 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     FOR    ${gpio}   IN  @{GPIOs_list}
         Log    "${gpio} under test: comp set to ${value}"
         ${gpio_comp} =    Get Comp Gpio    ${gpio}
-        ${Status}    set gpio value    ${gpio}    ${value}
+        ${Status}    set gpio value    ${gpio_comp}    ${value}
     END
 
 @{GPIOs_list} value read must be "${value}"
@@ -96,8 +95,9 @@ the system is asked to set a not existing gpio
     Set Global Variable     ${Status_Last_CMD}    ${Status} 
 
 output error must be FAILURE
-    [Documentation]    Check the Status of the last commend send
-    IF    ${Status_Last_CMD} == FAILURE
-        Log    Output error is not correct    level=ERROR
+    [Documentation]    Check the Status of the last command send
+    Log    ${Status_Last_CMD}
+    IF    '${Status_Last_CMD}' != 'FAILURE'
+        Fail    Output is't correct, it must be Fail
     END
 

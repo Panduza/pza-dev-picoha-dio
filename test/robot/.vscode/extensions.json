@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        // Python
+        "ms-python.python",
+        "ms-python.black-formatter",
+        // Robot Framework
+        "d-biehl.robotcode"
+    ]
+}
