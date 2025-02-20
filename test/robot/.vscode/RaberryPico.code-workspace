@@ -17,10 +17,6 @@
             "${workspaceFolder}/libraries/*",
             "${workspaceFolder}/platform/RaspberryPico/*"
         ],
-        "python.analysis.include":[        
-            "${workspaceFolder}/libraries/*",
-            "${workspaceFolder}/platform/RaspberryPico/*"
-        ],
         // Pytest
         "python.testing.unittestEnabled": false,
         "python.testing.pytestEnabled": true,
