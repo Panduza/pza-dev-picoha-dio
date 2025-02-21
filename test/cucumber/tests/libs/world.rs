@@ -13,7 +13,6 @@ use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::time::timeout;
 use tokio_serial::SerialStream;
-use tracing;
 
 // `World` is your shared, likely mutable state.
 // Cucumber constructs it via `Default::default()` for each scenario.
@@ -48,7 +47,7 @@ impl Debug for PiochaWorld {
 
 impl PiochaWorld {
     pub async fn just_write(&mut self, command: &[u8]) -> Result<(), String> {
-        tracing::info!("Sending command: {:?}", command);
+        //tracing::info!("Sending command: {:?}", command);
 
         // Send the command
         let _ = self
@@ -97,7 +96,7 @@ impl PiochaWorld {
         let mut encoded_command = [0u8; 1024];
         let mut slip_encoder = serial_line_ip::Encoder::new();
 
-        tracing::info!("Sending command: {:?}", command);
+        //tracing::info!("Sending command: {:?}", command);
 
         // Encode the command
         let mut totals = slip_encoder
