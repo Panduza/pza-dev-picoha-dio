@@ -17,6 +17,9 @@ harness = false       # allows Cucumber to print output instead of libtest
 name = "robustness"
 harness = false     # allows Cucumber to print output instead of libtest
 
+[[test]]
+name = "benchmark"
+harness = false
 
 [dev-dependencies]
 
