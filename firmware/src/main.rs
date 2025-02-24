@@ -16,7 +16,8 @@ mod dio_request_processor;
 
 use dio_request_processor::DioRequestProcessor;
 
-use femtopb::{error::DecodeError, Message};
+use femtopb::Message;
+use femtopb::error::DecodeError;
 mod api_dio;
 
 // Used to demonstrate writing formatted strings
@@ -32,6 +33,7 @@ use embassy_rp::bind_interrupts;
 // use embassy_rp::gpio;
 use embassy_rp::gpio::Flex;
 use embassy_rp::peripherals::USB;
+#[cfg(any(feature = "uart0_debug"))]
 use embassy_rp::uart;
 use embassy_rp::usb::{Driver, InterruptHandler};
 use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
@@ -214,8 +216,8 @@ async fn _main(spawner: Spawner) -> ! {
     let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =
         serial_line_ip::DecoderBuffer::new();
 
+    let mut buf = [0u8; 512];
     loop {
-        let mut buf = [0u8; 512];
         serial.wait_connection().await;
         // Check for new data
         if let Ok(count) = serial.read_packet(&mut buf).await {

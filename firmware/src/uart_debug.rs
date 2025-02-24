@@ -1,9 +1,12 @@
-use embassy_rp::peripherals;
-use embassy_rp::uart;
+#[cfg(any(feature = "uart0_debug"))]
+use embassy_rp::{peripherals, uart};
 
+#[cfg(any(feature = "uart0_debug"))]
 pub type DebugUart<'d> = uart::Uart<'d, peripherals::UART0, uart::Blocking>;
 
+#[cfg(any(feature = "uart0_debug"))]
 static mut NONE: Option<DebugUart> = None;
+#[cfg(any(feature = "uart0_debug"))]
 static mut UART_DEBUG: &mut Option<DebugUart> = unsafe { &mut NONE };
 
 #[cfg(any(feature = "uart0_debug"))]
