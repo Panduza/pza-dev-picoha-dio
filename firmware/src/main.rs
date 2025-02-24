@@ -17,7 +17,6 @@ mod dio_request_processor;
 use dio_request_processor::DioRequestProcessor;
 
 use femtopb::Message;
-use femtopb::error::DecodeError;
 mod api_dio;
 
 // Used to demonstrate writing formatted strings
@@ -223,28 +222,27 @@ async fn _main(spawner: Spawner) -> ! {
         if let Ok(count) = serial.read_packet(&mut buf).await {
             let mut data = &buf[..count];
             print_debug_message!(b"========================\r\n");
-            print_debug_message!("+ recieved: {:?}", data);
+            print_debug_message!("+ received: {:?}", data);
 
             loop {
                 // print_debug_message!(b"1");
                 // Check if we have enough data to decode
                 match decode_buffer.feed(data) {
-                    Ok((nb_bytes_processed, found_trame_complete)) => {
+                    Ok((nb_bytes_processed, /*found_trame_complete*/ true)) => {
                         // print_debug_message!(b"2");
-                        if found_trame_complete {
-                            let trame = decode_buffer.slice();
-                            if let Ok(request) = decode_api_request(trame) {
-                                print_debug_message!("+ process request: {:?}", request);
-                                let _ = request_processor
-                                    .process_request(&mut serial, &request)
-                                    .await;
-                                decode_buffer.reset();
-                                data = &buf[..count - nb_bytes_processed];
-                            }
+                        let trame = decode_buffer.slice();
+
+                        if let Ok(request) = PicohaDioRequest::decode(trame) {
+                            print_debug_message!("+ process request: {:?}", request);
+                            let _ = request_processor
+                                .process_request(&mut serial, &request)
+                                .await;
                         } else {
-                            // print_debug_message!(b"3");
-                            break;
+                            print_debug_message!("      * error decoding request");
                         }
+
+                        decode_buffer.reset();
+                        data = &data[nb_bytes_processed..];
                     }
                     other => {
                         print_debug_message!("{:?}", other);
@@ -254,23 +252,6 @@ async fn _main(spawner: Spawner) -> ! {
             }
         }
     }
-}
-
-/// Decode an API request
-///
-fn decode_api_request<'a>(frame: &'a [u8]) -> Result<PicohaDioRequest<'a>, DecodeError> {
-    PicohaDioRequest::decode(frame)
-        .and_then(|ppp| {
-            let mut new_request = PicohaDioRequest::default();
-            new_request.r#type = ppp.r#type;
-            new_request.pin_num = ppp.pin_num;
-            new_request.value = ppp.value;
-            Ok(new_request)
-        })
-        .or_else(|e| {
-            print_debug_message!("      * error decoding request: {:?}", &e);
-            Err(e)
-        })
 }
 
 bind_interrupts!(struct Irqs {
