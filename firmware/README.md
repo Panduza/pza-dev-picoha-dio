@@ -19,5 +19,5 @@ cargo install --locked elf2uf2-rs
 ```sh
 # To build and flash the pico
 cd pza-dev-picoha-dio/firmware
-cargo run --release --features uart0_debug
+cargo run --release
 ```
