@@ -1,5 +1,6 @@
 use crate::libs::api_dio::AnswerType;
 use crate::libs::api_dio::PicohaDioAnswer;
+use crate::libs::api_dio::PinDirection;
 use crate::libs::api_dio::PinValue;
 
 use crate::libs::api_dio::PicohaDioRequest;
@@ -79,8 +80,8 @@ async fn i_send_a_set_direction_in_pin_command_to_the_device(
     request.pin_num = pin.parse().unwrap();
 
     match direction.as_str() {
-        "output" => request.set_value(PinValue::Output),
-        "input" => request.set_value(PinValue::Input),
+        "output" => request.set_direction(PinDirection::Output),
+        "input" => request.set_direction(PinDirection::Input),
         _ => panic!("Invalid direction value"),
     }
 
@@ -155,7 +156,7 @@ async fn benchmark(world: &mut PiochaWorld) {
     let mut set_pin2_out_request = PicohaDioRequest::default();
     set_pin2_out_request.set_type(RequestType::SetPinDirection);
     set_pin2_out_request.pin_num = 2;
-    set_pin2_out_request.set_value(PinValue::Output);
+    set_pin2_out_request.set_direction(PinDirection::Output);
 
     let mut set_pin2_request = PicohaDioRequest::default();
     set_pin2_request.set_type(RequestType::SetPinValue);

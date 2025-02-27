@@ -1,3 +1,4 @@
+use crate::api_dio;
 use crate::api_dio::{PicohaDioAnswer, PicohaDioRequest};
 use crate::debug;
 use embassy_rp::usb::{Driver, Instance};
@@ -10,19 +11,13 @@ use embassy_rp::gpio::{Flex, Level, Pull};
 
 use crate::MAX_PINS;
 
-#[derive(PartialEq)]
-enum PinDirection {
-    Input = 0,
-    Output = 1,
-}
-
 /// Application Digital I/O
 pub struct DioRequestProcessor<'a, 'b> {
     pins: &'a mut [Option<Flex<'b>>; MAX_PINS],
-    directions: [PinDirection; MAX_PINS],
+    directions: [api_dio::PinDirection; MAX_PINS],
 }
 
-const DEFAULT_DIRECTION: PinDirection = PinDirection::Input;
+const DEFAULT_DIRECTION: api_dio::PinDirection = api_dio::PinDirection::Input;
 
 impl<'a, 'b> DioRequestProcessor<'a, 'b> {
     /// Create a new instance of the DioRequestProcessor
@@ -57,7 +52,7 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
         if let Some(pin) = &mut self.pins[pin_num as usize] {
             pin.set_as_output();
             pin.set_low();
-            self.directions[pin_num as usize] = PinDirection::Output;
+            self.directions[pin_num as usize] = api_dio::PinDirection::Output;
         }
 
         Ok(())
@@ -71,7 +66,7 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
         if let Some(pin) = &mut self.pins[pin_num as usize] {
             pin.set_as_input();
             pin.set_pull(Pull::Down);
-            self.directions[pin_num as usize] = PinDirection::Input;
+            self.directions[pin_num as usize] = api_dio::PinDirection::Input;
         }
 
         Ok(())
@@ -80,7 +75,7 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
     /// Set a pin low
     ///
     fn set_pin_low(&mut self, pin_num: u32) -> Result<(), &'static str> {
-        if self.directions[pin_num as usize] != PinDirection::Output {
+        if self.directions[pin_num as usize] != api_dio::PinDirection::Output {
             debug!("\tError: pin {:?} is input", pin_num);
             return Err("Pin is input");
         }
@@ -96,7 +91,7 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
     /// Set a pin high
     ///
     fn set_pin_high(&mut self, pin_num: u32) -> Result<(), &'static str> {
-        if self.directions[pin_num as usize] != PinDirection::Output {
+        if self.directions[pin_num as usize] != api_dio::PinDirection::Output {
             debug!("\tError: pin {:?} is input", pin_num);
 
             return Err("Pin is input");
@@ -121,17 +116,17 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
 
         // Default response
         let mut answer = PicohaDioAnswer::default();
-        answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Success);
+        answer.r#type = femtopb::EnumValue::Known(api_dio::AnswerType::Success);
 
         // Check pin index
         if let femtopb::EnumValue::Known(req_type) = request.r#type {
-            if req_type != crate::api_dio::RequestType::Ping {
+            if req_type != api_dio::RequestType::Ping {
                 if request.pin_num >= self.pins.len() as u32
                     || self.pins[request.pin_num as usize].is_none()
                 {
                     debug!("\tInvalid pin {:?}", request.pin_num);
 
-                    answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+                    answer.r#type = femtopb::EnumValue::Known(api_dio::AnswerType::Failure);
                     answer.error_message = Some("Invalid pin");
                     let _ = self.send_answer(serial, &mut answer).await;
                     return;
@@ -143,17 +138,17 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
         // Choose the correct process function
         let r = match request.r#type {
             femtopb::EnumValue::Known(k) => match k {
-                crate::api_dio::RequestType::Ping => self.process_request_ping(&mut answer),
-                crate::api_dio::RequestType::SetPinDirection => {
+                api_dio::RequestType::Ping => self.process_request_ping(&mut answer),
+                api_dio::RequestType::SetPinDirection => {
                     self.process_request_set_pin_direction(request, &mut answer)
                 }
-                crate::api_dio::RequestType::SetPinValue => {
+                api_dio::RequestType::SetPinValue => {
                     self.process_request_set_pin_value(request, &mut answer)
                 }
-                crate::api_dio::RequestType::GetPinDirection => {
+                api_dio::RequestType::GetPinDirection => {
                     self.process_request_get_pin_direction(request, &mut answer)
                 }
-                crate::api_dio::RequestType::GetPinValue => {
+                api_dio::RequestType::GetPinValue => {
                     self.process_request_get_pin_value(request, &mut answer)
                 }
             },
@@ -161,7 +156,7 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
         };
 
         let _ = r.or_else(|e| {
-            answer.r#type = femtopb::EnumValue::Known(crate::api_dio::AnswerType::Failure);
+            answer.r#type = femtopb::EnumValue::Known(api_dio::AnswerType::Failure);
             answer.error_message = Some(e);
             Err(e)
         });
@@ -185,16 +180,12 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
     ) -> Result<(), &'static str> {
         debug!("      * processing request: SET_PIN_DIRECTION");
 
-        match request.value {
+        match request.direction {
             femtopb::EnumValue::Known(v) => match v {
-                crate::api_dio::PinValue::Input => self.set_pin_as_input(request.pin_num),
-                crate::api_dio::PinValue::Output => self.set_pin_as_output(request.pin_num),
-                _ => {
-                    debug!("      * invalid value: {:?}", v);
-                    Err("Invalid value")
-                }
+                api_dio::PinDirection::Input => self.set_pin_as_input(request.pin_num),
+                api_dio::PinDirection::Output => self.set_pin_as_output(request.pin_num),
             },
-            femtopb::EnumValue::Unknown(_) => Err("Invalid value"),
+            _other => Err("Invalid value"),
         }
     }
 
@@ -211,14 +202,10 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
         // Process the request
         match request.value {
             femtopb::EnumValue::Known(v) => match v {
-                crate::api_dio::PinValue::Low => self.set_pin_low(request.pin_num),
-                crate::api_dio::PinValue::High => self.set_pin_high(request.pin_num),
-                _ => {
-                    debug!("      * invalid value: {:?}", v);
-                    Err("Invalid value")
-                }
+                api_dio::PinValue::Low => self.set_pin_low(request.pin_num),
+                api_dio::PinValue::High => self.set_pin_high(request.pin_num),
             },
-            femtopb::EnumValue::Unknown(_) => Err("Invalid value"),
+            _other => Err("Invalid value"),
         }
     }
 
@@ -232,13 +219,13 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
         debug!("      * processing request: GET_PIN_DIRECTION");
 
         match self.directions[request.pin_num as usize] {
-            PinDirection::Input => {
+            api_dio::PinDirection::Input => {
                 debug!("      * input");
-                answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Input));
+                answer.direction = femtopb::EnumValue::Known(api_dio::PinDirection::Input);
             }
-            PinDirection::Output => {
+            api_dio::PinDirection::Output => {
                 debug!("      * output");
-                answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Output));
+                answer.direction = femtopb::EnumValue::Known(api_dio::PinDirection::Output);
             }
         }
 
@@ -255,19 +242,19 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
         if let Some(pin) = &self.pins[request.pin_num as usize] {
             let level = {
                 match self.directions[request.pin_num as usize] {
-                    PinDirection::Input => pin.get_level(),
-                    PinDirection::Output => pin.get_output_level(),
+                    api_dio::PinDirection::Input => pin.get_level(),
+                    api_dio::PinDirection::Output => pin.get_output_level(),
                 }
             };
 
             match level {
                 Level::High => {
                     debug!("      * high");
-                    answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::High));
+                    answer.value = femtopb::EnumValue::Known(api_dio::PinValue::High);
                 }
                 Level::Low => {
                     debug!("      * low");
-                    answer.value = Some(femtopb::EnumValue::Known(crate::api_dio::PinValue::Low));
+                    answer.value = femtopb::EnumValue::Known(api_dio::PinValue::Low);
                 }
             }
         }

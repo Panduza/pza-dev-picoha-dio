@@ -21,6 +21,9 @@ harness = false     # allows Cucumber to print output instead of libtest
 name = "benchmark"
 harness = false
 
+[build-dependencies]
+prost-build = { version = "0.12" }
+
 [dev-dependencies]
 
 # Main async framework for the platform
@@ -32,7 +35,6 @@ rand = "0.8"
 cucumber = { version = "0.21.1", features = ["tracing", "timestamps"] }
 futures = "0.3"
 
-prost-build = { version = "0.12" }
 prost = "0.12"
 # Only necessary if using Protobuf well-known types:
 prost-types = "0.12"

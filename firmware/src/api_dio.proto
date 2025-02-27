@@ -8,19 +8,21 @@ enum RequestType {
     GET_PIN_VALUE = 4;
 }
 
-// This structure should be splitted
-// 1 for values and 1 for directions
 enum PinValue {
     LOW = 0;
     HIGH = 1;
-    INPUT = 2;
-    OUTPUT = 3;
+}
+
+enum PinDirection {
+    INPUT = 0;
+    OUTPUT = 1;
 }
 
 message PicohaDioRequest {
     RequestType type = 1;
     uint32 pin_num = 2;
     PinValue value = 3;
+    PinDirection direction = 4;
 }
 
 enum AnswerType {
@@ -30,6 +32,7 @@ enum AnswerType {
 
 message PicohaDioAnswer {
     AnswerType type = 1;
-    optional PinValue value = 2;
-    optional string error_message = 3;
+    PinValue value = 2;
+    PinDirection direction = 3;
+    optional string error_message = 4;
 }

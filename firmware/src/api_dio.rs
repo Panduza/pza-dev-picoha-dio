@@ -6,6 +6,8 @@ pub struct PicohaDioRequest<'a> {
     pub pin_num: u32,
     #[femtopb(enumeration, tag = 3)]
     pub value: ::femtopb::enumeration::EnumValue<PinValue>,
+    #[femtopb(enumeration, tag = 4)]
+    pub direction: ::femtopb::enumeration::EnumValue<PinDirection>,
     #[femtopb(unknown_fields)]
     pub unknown_fields: femtopb::UnknownFields<'a>,
 }
@@ -13,9 +15,11 @@ pub struct PicohaDioRequest<'a> {
 pub struct PicohaDioAnswer<'a> {
     #[femtopb(enumeration, tag = 1)]
     pub r#type: ::femtopb::enumeration::EnumValue<AnswerType>,
-    #[femtopb(enumeration, optional, tag = 2)]
-    pub value: ::core::option::Option<::femtopb::enumeration::EnumValue<PinValue>>,
-    #[femtopb(string, optional, tag = 3)]
+    #[femtopb(enumeration, tag = 2)]
+    pub value: ::femtopb::enumeration::EnumValue<PinValue>,
+    #[femtopb(enumeration, tag = 3)]
+    pub direction: ::femtopb::enumeration::EnumValue<PinDirection>,
+    #[femtopb(string, optional, tag = 4)]
     pub error_message: ::core::option::Option<&'a str>,
     #[femtopb(unknown_fields)]
     pub unknown_fields: femtopb::UnknownFields<'a>,
@@ -59,8 +63,6 @@ impl RequestType {
         }
     }
 }
-/// This structure should be splitted
-/// 1 for values and 1 for directions
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::femtopb::Enumeration)]
 #[repr(i32)]
 #[derive(Default)]
@@ -68,8 +70,6 @@ pub enum PinValue {
     #[default]
     Low = 0,
     High = 1,
-    Input = 2,
-    Output = 3,
 }
 impl PinValue {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -81,8 +81,6 @@ impl PinValue {
         match self {
             Self::Low => "LOW",
             Self::High => "HIGH",
-            Self::Input => "INPUT",
-            Self::Output => "OUTPUT",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -91,6 +89,34 @@ impl PinValue {
         match value {
             "LOW" => Some(Self::Low),
             "HIGH" => Some(Self::High),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::femtopb::Enumeration)]
+#[repr(i32)]
+#[derive(Default)]
+pub enum PinDirection {
+    #[default]
+    Input = 0,
+    Output = 1,
+}
+impl PinDirection {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    #[allow(dead_code)]
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Input => "INPUT",
+            Self::Output => "OUTPUT",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    #[allow(dead_code)]
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
             "INPUT" => Some(Self::Input),
             "OUTPUT" => Some(Self::Output),
             _ => None,

@@ -30,6 +30,7 @@ pub struct Settings {
     /// Read timeout
     pub read_timeout: Option<Duration>,
     /// Time to wait between 2 operations
+    #[allow(dead_code)]
     pub time_lock_duration: Option<Duration>,
 }
 
@@ -183,6 +184,7 @@ impl Settings {
         self
     }
 
+    #[allow(dead_code)]
     pub fn set_time_lock_duration(mut self, time_lock_duration: Duration) -> Self {
         self.time_lock_duration = Some(time_lock_duration);
         self
