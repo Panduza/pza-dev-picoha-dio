@@ -161,7 +161,36 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
             Err(e)
         });
 
-        let _ = self.send_answer(serial, &mut answer).await;
+        if answer.r#type == femtopb::EnumValue::Known(api_dio::AnswerType::Success) {
+            let buf: &[u8];
+            if answer.value == femtopb::EnumValue::Known(api_dio::PinValue::High) {
+                buf = &[crate::END, 16, api_dio::PinValue::High as u8, crate::END];
+            } else {
+                if answer.direction == femtopb::EnumValue::Known(api_dio::PinDirection::Output) {
+                    buf = &[
+                        crate::END,
+                        24,
+                        api_dio::PinDirection::Output as u8,
+                        crate::END,
+                    ];
+                } else {
+                    buf = &[crate::END, crate::END];
+                }
+            }
+
+            let res = serial.write_packet(buf).await;
+
+            match res {
+                Ok(_) => {
+                    debug!("      * answer sent");
+                }
+                Err(e) => {
+                    debug!("      * answer not sent {:?}", e);
+                }
+            }
+        } else {
+            let _ = self.send_answer(serial, &mut answer).await;
+        }
     }
 
     /// Process a ping request

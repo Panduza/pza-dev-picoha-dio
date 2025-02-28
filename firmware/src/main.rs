@@ -13,13 +13,10 @@ mod dio_request_processor;
 
 use dio_request_processor::DioRequestProcessor;
 
-use femtopb::Message;
 mod api_dio;
 
 // Used to demonstrate writing formatted strings
 use core::fmt::Write;
-
-use serial_line_ip;
 
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
@@ -33,6 +30,11 @@ use {defmt_rtt as _, panic_probe as _};
 use static_cell::StaticCell;
 
 pub const MAX_PINS: usize = 29;
+pub const END: u8 = 0xC0; // SLIP start/end marker
+const GET_PIN_VALUE: u8 = api_dio::RequestType::GetPinValue as u8;
+const GET_PIN_DIRECTION: u8 = api_dio::RequestType::GetPinDirection as u8;
+const SET_PIN_VALUE: u8 = api_dio::RequestType::SetPinValue as u8;
+const SET_PIN_DIRECTION: u8 = api_dio::RequestType::SetPinDirection as u8;
 
 #[embassy_executor::main]
 async fn _main(_spawner: Spawner) {
@@ -163,8 +165,22 @@ async fn _main(_spawner: Spawner) {
     // Create the request processor and init all pin to input
     let mut request_processor = DioRequestProcessor::new(&mut pins);
 
-    let mut decode_buffer: serial_line_ip::DecoderBuffer<512> =
-        serial_line_ip::DecoderBuffer::new();
+    let mut ping_request = PicohaDioRequest::default();
+    ping_request.r#type = femtopb::EnumValue::Known(api_dio::RequestType::Ping);
+
+    let mut get_pin_value_request = PicohaDioRequest::default();
+    get_pin_value_request.r#type = femtopb::EnumValue::Known(api_dio::RequestType::GetPinValue);
+
+    let mut get_pin_direction_request = PicohaDioRequest::default();
+    get_pin_direction_request.r#type =
+        femtopb::EnumValue::Known(api_dio::RequestType::GetPinDirection);
+
+    let mut set_pin_value_request = PicohaDioRequest::default();
+    set_pin_value_request.r#type = femtopb::EnumValue::Known(api_dio::RequestType::SetPinValue);
+
+    let mut set_pin_direction_request = PicohaDioRequest::default();
+    set_pin_direction_request.r#type =
+        femtopb::EnumValue::Known(api_dio::RequestType::SetPinDirection);
 
     let decode_fut = async {
         let mut buf = [0u8; 512];
@@ -177,37 +193,83 @@ async fn _main(_spawner: Spawner) {
                 debug!("+ received: {:?}", data);
 
                 loop {
-                    // Check if we have enough data to decode
-                    match decode_buffer.feed(data) {
-                        Ok((nb_bytes_processed, /*found_trame_complete*/ true)) => {
-                            let trame = decode_buffer.slice();
+                    if data.len() < 2 || data[0] != END {
+                        break;
+                    }
 
-                            if let Ok(request) = PicohaDioRequest::decode(trame) {
-                                debug!("+ process request");
-                                let _ = request_processor
-                                    .process_request(&mut serial, &request)
-                                    .await;
-                            } else {
-                                debug!("      * error decoding request");
-                            }
+                    // [END, END] -> Ping request
+                    if data[1] == END {
+                        data = &data[2..];
+                        let _ = request_processor
+                            .process_request(&mut serial, &ping_request)
+                            .await;
+                        continue;
+                    }
 
-                            decode_buffer.reset();
-                            data = &data[nb_bytes_processed..];
+                    data = &data[1..];
+
+                    if data.len() < 2 {
+                        debug!("      * error decoding request");
+                        break;
+                    }
+
+                    let request: &mut PicohaDioRequest;
+
+                    match data[..2] {
+                        [8, GET_PIN_VALUE] => {
+                            request = &mut get_pin_value_request;
                         }
-                        // No more data
-                        Ok((0, /*found_trame_complete*/ false)) => {
-                            decode_buffer.reset();
+                        [8, GET_PIN_DIRECTION] => {
+                            request = &mut get_pin_direction_request;
+                        }
+                        [8, SET_PIN_VALUE] => {
+                            request = &mut set_pin_value_request;
+                        }
+                        [8, SET_PIN_DIRECTION] => {
+                            request = &mut set_pin_direction_request;
+                        }
+                        _ => {
+                            debug!("      * error decoding request");
                             break;
                         }
-                        // Unterminated command
-                        Ok((_, /*found_trame_complete*/ false)) => {
+                    }
+
+                    data = &data[2..];
+
+                    // By default, all 0 values are not encoded
+                    request.pin_num = 0;
+                    request.value = femtopb::EnumValue::Known(api_dio::PinValue::Low);
+                    request.direction = femtopb::EnumValue::Known(api_dio::PinDirection::Input);
+
+                    loop {
+                        if data.len() < 2 {
                             break;
                         }
-                        other => {
-                            debug!("      * error feed data: {:?}", other);
-                            decode_buffer.reset();
-                            break;
-                        }
+                        match data[..2] {
+			    [16, _ /*pin_num*/] => {
+				request.pin_num = data[1] as u32;
+			    }
+			    [24, _ /*value*/] => {
+				request.value = femtopb::EnumValue::Known(api_dio::PinValue::High);
+			    }
+			    [32, _ /*direction*/] => {
+				request.direction = femtopb::EnumValue::Known(api_dio::PinDirection::Output);
+			    }
+			    _ => {break;}
+			}
+                        data = &data[2..];
+                    }
+
+                    // Must finish by END marker
+                    if data.len() == 1 && data[0] == END {
+                        debug!("+ process request");
+                        let _ = request_processor
+                            .process_request(&mut serial, &request)
+                            .await;
+                        data = &data[1..];
+                    } else {
+                        debug!("      * error decoding request");
+                        break;
                     }
                 }
             }

@@ -174,11 +174,12 @@ async fn benchmark(world: &mut PiochaWorld) {
 
     tracing::info!("Ping request size {}", ping_request_vec.len());
     tracing::info!(
-        "Set pin out request size {}",
-        set_pin2_out_request_vec.len()
+        "Set pin2 out request size {}, {:?}",
+        set_pin2_out_request_vec.len(),
+	set_pin2_out_request_vec
     );
-    tracing::info!("Set pin request size {}", set_pin2_request_vec.len());
-    tracing::info!("Get pin request size {}", get_pin3_request_vec.len());
+    tracing::info!("Set pin2 High request size {}, {:?}", set_pin2_request_vec.len(), set_pin2_request_vec);
+    tracing::info!("Get pin3 request size {}, {:?}", get_pin3_request_vec.len(), get_pin3_request_vec);
 
     let answer_buffer = &mut [0u8; 1024];
 
