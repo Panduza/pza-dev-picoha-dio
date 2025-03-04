@@ -152,6 +152,62 @@ impl PiochaWorld {
         self.decode_buffer.reset();
         Ok(trame_size)
     }
+    /// Lock the connector to read a command then wait for the answers
+    ///
+    #[allow(dead_code)]
+    pub async fn read(&mut self, response: &mut [u8]) -> Result<usize, String> {
+        match self.serial_settings.read_timeout {
+            // If the timeout is set, use it
+            Some(timeout_value) => {
+                return Ok(timeout(timeout_value, self.__read(response))
+                    .await
+                    .map_err(|e| format!("Timeout reading {:?}", e))??);
+            }
+            // Else good luck !
+            None => {
+                return Ok(self.__read(response).await?);
+            }
+        }
+    }
+
+    /// This operation is not provided to the public interface
+    /// User must use the timeout version for safety on the platform
+    ///
+    async fn __read(&mut self, response: &mut [u8]) -> Result<usize, String> {
+        // Read the response until "end"
+        loop {
+            let mut chunk_buffer = [0u8; 512];
+
+            // Read a chunck
+            let read_size = self
+                .serial_stream
+                .as_mut()
+                .ok_or_else(|| format!("No serial stream"))?
+                .read(&mut chunk_buffer)
+                .await
+                .map_err(|e| format!("Unable to read on serial stream {:?}", e))?;
+
+            let data = &chunk_buffer[..read_size];
+            match self.decode_buffer.feed(data) {
+                core::prelude::v1::Ok((_nb_bytes_processed, found_trame_complete)) => {
+                    if found_trame_complete {
+                        // let trame = self.decode_buffer.slice();
+                        // let request = try_to_decode_api_request(trame).unwrap();
+                        // print_debug_message!("+ process request: {:?}", request);
+                        // request_processor.process_request(&mut serial, request);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let trame_size = self.decode_buffer.slice().len();
+        response[..trame_size].copy_from_slice(self.decode_buffer.slice());
+
+        self.decode_buffer.reset();
+        Ok(trame_size)
+    }
 }
 
 impl std::default::Default for PiochaWorld {
