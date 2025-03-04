@@ -3,6 +3,7 @@
 .gdb_history
 Cargo.lock
 target/
+*~
 
 interactive_console_output.xml
 
