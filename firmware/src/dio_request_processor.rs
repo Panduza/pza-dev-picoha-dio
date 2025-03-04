@@ -102,7 +102,7 @@ impl<'a, 'b> DioRequestProcessor<'a, 'b> {
             return Err("Pin is input");
         }
 
-        debug!("\t+pin {:?} low", pin_num);
+        debug!("\t+pin {:?} high", pin_num);
         if let Some(pin) = &mut self.pins[pin_num as usize] {
             pin.set_high();
         }

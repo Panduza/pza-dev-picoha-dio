@@ -194,8 +194,18 @@ async fn _main(_spawner: Spawner) {
                             decode_buffer.reset();
                             data = &data[nb_bytes_processed..];
                         }
+                        // No more data
+                        Ok((0, /*found_trame_complete*/ false)) => {
+                            decode_buffer.reset();
+                            break;
+                        }
+                        // Unterminated command
+                        Ok((_, /*found_trame_complete*/ false)) => {
+                            break;
+                        }
                         other => {
                             debug!("      * error feed data: {:?}", other);
+                            decode_buffer.reset();
                             break;
                         }
                     }
