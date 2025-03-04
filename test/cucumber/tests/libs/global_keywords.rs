@@ -64,6 +64,42 @@ async fn send_ping(world: &mut PiochaWorld) {
 async fn receive_success(world: &mut PiochaWorld) {
     let answer = world.last_answer.as_ref().unwrap();
     assert_eq!(answer.r#type, AnswerType::Success as i32);
+    world.last_answer = None;
+}
+
+#[then("I must receive a FAILURE response from the device")]
+async fn receive_failure(world: &mut PiochaWorld) {
+    let answer = world.last_answer.as_ref().unwrap();
+    assert_eq!(answer.r#type, AnswerType::Failure as i32);
+    world.last_answer = None;
+}
+
+#[then("I must receive a pin value high")]
+async fn receive_pin_value_high(world: &mut PiochaWorld) {
+    let answer = world.last_answer.as_ref().unwrap();
+    assert_eq!(answer.r#type, AnswerType::Success as i32);
+    assert_eq!(answer.value.unwrap(), PinValue::High as i32);
+}
+
+#[then("I must receive a pin value low")]
+async fn receive_pin_value_low(world: &mut PiochaWorld) {
+    let answer = world.last_answer.as_ref().unwrap();
+    assert_eq!(answer.r#type, AnswerType::Success as i32);
+    assert_eq!(answer.value, None);
+}
+
+#[then("I must receive a pin direction output")]
+async fn receive_pin_direction_output(world: &mut PiochaWorld) {
+    let answer = world.last_answer.as_ref().unwrap();
+    assert_eq!(answer.r#type, AnswerType::Success as i32);
+    assert_eq!(answer.value.unwrap(), PinValue::Output as i32);
+}
+
+#[then("I must receive a pin direction input")]
+async fn receive_pin_direction_input(world: &mut PiochaWorld) {
+    let answer = world.last_answer.as_ref().unwrap();
+    assert_eq!(answer.r#type, AnswerType::Success as i32);
+    assert_eq!(answer.value.unwrap(), PinValue::Input as i32);
 }
 
 #[when(expr = "I send a set_direction {string} in pin {string} command to the device")]
@@ -110,6 +146,44 @@ async fn i_send_a_set_value_in_pin_command_to_the_device(
         "low" => request.set_value(PinValue::Low),
         _ => panic!("Invalid direction value"),
     }
+
+    let answer_buffer = &mut [0u8; 1024];
+    let size = world
+        .write_then_read(&request.encode_to_vec(), answer_buffer)
+        .await
+        .unwrap();
+
+    // Decode the answer
+    let answer_slice = answer_buffer[..size].as_ref();
+    tracing::info!("Received {} bytes -> {:?}", size, answer_slice);
+    let answer = PicohaDioAnswer::decode(answer_slice).unwrap();
+    world.last_answer = Some(answer);
+}
+
+#[when(expr = "I send a get_value in pin {string} command to the device")]
+async fn i_send_a_get_value_in_pin_command_to_the_device(world: &mut PiochaWorld, pin: String) {
+    let mut request = PicohaDioRequest::default();
+    request.set_type(RequestType::GetPinValue);
+    request.pin_num = pin.parse().unwrap();
+
+    let answer_buffer = &mut [0u8; 1024];
+    let size = world
+        .write_then_read(&request.encode_to_vec(), answer_buffer)
+        .await
+        .unwrap();
+
+    // Decode the answer
+    let answer_slice = answer_buffer[..size].as_ref();
+    println!("Received {} bytes -> {:?}", size, answer_slice);
+    let answer = PicohaDioAnswer::decode(answer_slice).unwrap();
+    world.last_answer = Some(answer);
+}
+
+#[when(expr = "I send a get_direction in pin {string} command to the device")]
+async fn i_send_a_get_direction_in_pin_command_to_the_device(world: &mut PiochaWorld, pin: String) {
+    let mut request = PicohaDioRequest::default();
+    request.set_type(RequestType::GetPinDirection);
+    request.pin_num = pin.parse().unwrap();
 
     let answer_buffer = &mut [0u8; 1024];
     let size = world

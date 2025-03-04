@@ -23,10 +23,21 @@ Feature: Control Pin Feature
   Scenario Outline: Loopback Scenario
     Given a serial connection to the device opened
     When I send a set_direction "output" in pin "<pin_out>" command to the device
-    When I send a set_direction "output" in pin "<pin_in>" command to the device
-    When I send a set_value "low" in pin "<pin_in>" command to the device
-    When I send a set_value "high" in pin "<pin_out>" command to the device
     Then I must receive a SUCCESS response from the device
+    When I send a set_direction "input" in pin "<pin_in>" command to the device
+    Then I must receive a SUCCESS response from the device
+    # Can't set direction to input pin
+    When I send a set_value "low" in pin "<pin_in>" command to the device
+    Then I must receive a FAILURE response from the device
+    # Test low -> high
+    When I send a set_value "high" in pin "<pin_out>" command to the device
+    When I send a get_value in pin "<pin_in>" command to the device
+    Then I must receive a pin value high
+    # Test high -> low
+    When I send a set_value "low" in pin "<pin_out>" command to the device
+    When I send a get_value in pin "<pin_in>" command to the device
+    Then I must receive a pin value low
+
     # When I wait for 2 seconds
     # When I send a set_value "low" in pin "<pin_out>" command to the device
     # Then I must receive a SUCCESS response from the device
