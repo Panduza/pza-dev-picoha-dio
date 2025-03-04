@@ -1,5 +1,6 @@
 use crate::libs::api_dio::AnswerType;
 use crate::libs::api_dio::PicohaDioAnswer;
+use crate::libs::api_dio::PinDirection;
 use crate::libs::api_dio::PinValue;
 
 use crate::libs::api_dio::PicohaDioRequest;
@@ -8,9 +9,11 @@ use crate::libs::api_dio::RequestType;
 use cucumber::{given, then, when};
 use prost::Message;
 use tokio_serial::SerialStream;
+use tracing;
 
 use crate::libs::world::PiochaWorld;
 use rand::Rng;
+use std::time::Instant;
 
 // Steps are defined with `given`, `when` and `then` attributes.
 #[given("a serial connection to the device opened")]
@@ -77,8 +80,8 @@ async fn i_send_a_set_direction_in_pin_command_to_the_device(
     request.pin_num = pin.parse().unwrap();
 
     match direction.as_str() {
-        "output" => request.set_value(PinValue::Output),
-        "input" => request.set_value(PinValue::Input),
+        "output" => request.set_direction(PinDirection::Output),
+        "input" => request.set_direction(PinDirection::Input),
         _ => panic!("Invalid direction value"),
     }
 
@@ -137,7 +140,90 @@ async fn i_send_a_corrupted_data_to_the_device(world: &mut PiochaWorld) {
 }
 
 #[when(expr = "I wait for 2 seconds")]
-async fn wait_2_sec(world: &mut PiochaWorld) {
+async fn wait_2_sec(_world: &mut PiochaWorld) {
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 }
 
+#[when(expr = "Do benchmark")]
+/// Do 100 times :
+/// * Ping
+/// * Write PIN 2 High
+/// * Read  PIN 3
+async fn benchmark(world: &mut PiochaWorld) {
+    let mut ping_request = PicohaDioRequest::default();
+    ping_request.set_type(RequestType::Ping);
+
+    let mut set_pin2_out_request = PicohaDioRequest::default();
+    set_pin2_out_request.set_type(RequestType::SetPinDirection);
+    set_pin2_out_request.pin_num = 2;
+    set_pin2_out_request.set_direction(PinDirection::Output);
+
+    let mut set_pin2_request = PicohaDioRequest::default();
+    set_pin2_request.set_type(RequestType::SetPinValue);
+    set_pin2_request.pin_num = 2;
+    set_pin2_request.set_value(PinValue::High);
+
+    let mut get_pin3_request = PicohaDioRequest::default();
+    get_pin3_request.set_type(RequestType::GetPinValue);
+    get_pin3_request.pin_num = 3;
+
+    let ping_request_vec = ping_request.encode_to_vec();
+    let set_pin2_request_vec = set_pin2_request.encode_to_vec();
+    let set_pin2_out_request_vec = set_pin2_out_request.encode_to_vec();
+    let get_pin3_request_vec = get_pin3_request.encode_to_vec();
+
+    tracing::info!("Ping request size {}", ping_request_vec.len());
+    tracing::info!(
+        "Set pin2 out request size {}, {:?}",
+        set_pin2_out_request_vec.len(),
+	set_pin2_out_request_vec
+    );
+    tracing::info!("Set pin2 High request size {}, {:?}", set_pin2_request_vec.len(), set_pin2_request_vec);
+    tracing::info!("Get pin3 request size {}, {:?}", get_pin3_request_vec.len(), get_pin3_request_vec);
+
+    let answer_buffer = &mut [0u8; 1024];
+
+    // Set pin 2 OUT
+    let size = world
+        .write_then_read(&set_pin2_out_request_vec, answer_buffer)
+        .await
+        .unwrap();
+    let answer_slice = answer_buffer[..size].as_ref();
+    let answer = PicohaDioAnswer::decode(answer_slice).unwrap();
+    assert_eq!(answer.r#type, AnswerType::Success as i32);
+
+    let start = Instant::now();
+
+    for _i in 0..100 {
+        let size = world
+            .write_then_read(&ping_request_vec, answer_buffer)
+            .await
+            .unwrap();
+        let answer_slice = answer_buffer[..size].as_ref();
+        let answer = PicohaDioAnswer::decode(answer_slice).unwrap();
+        assert_eq!(answer.r#type, AnswerType::Success as i32);
+
+        let size = world
+            .write_then_read(&set_pin2_request_vec, answer_buffer)
+            .await
+            .unwrap();
+        let answer_slice: &[u8] = answer_buffer[..size].as_ref();
+        let answer = PicohaDioAnswer::decode(answer_slice).unwrap();
+        assert_eq!(answer.r#type, AnswerType::Success as i32);
+
+        let size = world
+            .write_then_read(&get_pin3_request_vec, answer_buffer)
+            .await
+            .unwrap();
+        let answer_slice = answer_buffer[..size].as_ref();
+        let answer = PicohaDioAnswer::decode(answer_slice).unwrap();
+        assert_eq!(answer.r#type, AnswerType::Success as i32);
+    }
+
+    let elapsed = start.elapsed();
+
+    tracing::info!("Elapsed time {} ms", elapsed.as_millis());
+
+    let answer = PicohaDioAnswer::default();
+    world.last_answer = Some(answer);
+}
