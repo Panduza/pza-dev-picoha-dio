@@ -1,5 +1,5 @@
 """
-This file describe Raspberry Pico
+This file describe Raspberry Pico test bench setup.
 """
 
 import logging, os
@@ -50,14 +50,14 @@ def get_comp_gpio(gpio: int):
     """
        Get paired GPIO
 
-       # Raspberry Pico testing Setup
+       # Raspberry Pico test bench Setup
        To simplified the validation process GPIO are connected in pair.
                ┌──────┐--┌──────┐
      ── GPIO0  | 1    └──┘   40 |  VBUS
      ── GPIO1  | 2    USB    39 |  VSYS
           GND  | 3           38 |  GND
     ┌─  GPIO2  | 4           37 |  3V3_EN
-    └─  GPIO3  | 5           36 |  3V3
+    └─  GPIO3  | 5  [GPIO25] 36 |  3V3
     ┌─  GPIO4  | 6           35 |
     └─  GPIO5  | 7           34 |  GPIO28  ─┐
           GND  | 8   ┌    ┐  33 |  GND      |
@@ -76,20 +76,23 @@ def get_comp_gpio(gpio: int):
                └───────┴┴┴──────┘
 
     """
-    if gpio not in GPIO_USABLE:
-        logging.warning("This gpio is not usable on this Setup.")
-        return "FAILURE"
-    elif gpio == 25:
-        logging.warning("GPIO 25 is builtin LED")
-        return "FAILURE"
+    if gpio == BUILTIN_LED:
+        raise ValueError("GPIO 25 is builtin LED: there is no paired GPIO to it.")
+    elif gpio in GPIO_UART:
+        raise ValueError("GPIO_UART are not usable: reserved for debugging propose")
+    elif gpio not in GPIO_USABLE:
+        raise ValueError("This gpio is not usable on this Setup.")
+
     elif gpio == 22:
         return 26
     elif gpio == 26:
         return 22
+
     elif gpio == 27:
         return 28
     elif gpio == 28:
         return 27
+
     else:
         return gpio - 1 if gpio % 2 else gpio + 1
 

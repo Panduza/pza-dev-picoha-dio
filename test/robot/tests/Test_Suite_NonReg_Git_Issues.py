@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test Suite of no regression
-Describe small test scenarios to help validation of Git issues 
+Describe small test scenarios to help validation of Git issues
 """
 
 import __future__
@@ -26,7 +26,7 @@ sys.path.append(
 )
 
 import api_dio_pb2 as dio
-from launcher_Python_test import setup_test, timeout_wrapper
+from python_utils import setup_test, timeout_wrapper
 from API_PicoHostAdapterDio import PicoHostAdapterDio
 
 # ========= Test Suite of no regression =========

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """API to control Pico Host Adapter Dio"""
 
 import __future__
@@ -53,30 +53,27 @@ def setup_logging(
 
 
 # ================== Class =====================
-class PicoHostAdapterDio:
+class PicoHostAdapterDio(serial.Serial):
     """Main API class to control Pico Host Adapter Dio"""
 
     def __init__(
         self,
-        serial_COM: str,
-        baud_rate: int = 9600,
-        byte_size: int = 8,
+        port: str = None,
+        baudrate: int = 9600,
+        bytesize: int = 8,
         timeout: int = 2,
     ):
-        self.__serialPort = serial.Serial(
-            port=serial_COM,
-            baudrate=baud_rate,
-            bytesize=byte_size,
+        super().__init__(
+            port=port,
+            baudrate=baudrate,
+            bytesize=bytesize,
             timeout=timeout,
             stopbits=serial.STOPBITS_ONE,
         )
 
     def __del__(self):
-        try:
-            if self.is_connected():
-                self.__serialPort.close()
-        except Exception as err:
-            logging.error(f"{err}")
+        """Close serial port"""
+        self.close()
 
     def __picoha_dio_request(
         self,
@@ -94,24 +91,16 @@ class PicoHostAdapterDio:
         logging.debug(MessageToDict(picoha_dio_request))
         try:
             # Send/Write PicohaDioRequest in serial in binary using slip
-            self.__serialPort.write(
-                sl.encode(picoha_dio_request.SerializeToString()) + sl.END
-            )
-        except TypeError as err:
-            logging.error(f"TypeError: {err}")
-            raise PicoHostAdapterDio(err)
-        except AttributeError as err:
-            logging.error(f"AttributeError: {err}")
-            raise PicoHostAdapterDio(err)
+            self.write(sl.encode(picoha_dio_request.SerializeToString()) + sl.END)
         except Exception as err:
-            logging.error(f"Request Error: {err}")
+            logging.error(f"{err}")
             raise PicoHostAdapterDio(err)
 
     def __picoha_dio_answer(self) -> dio.PicohaDioAnswer:
         """Wait answer on serial COM"""
         try:
             # Read data out of the buffer until a carriage return / new line is found
-            serialString = self.__serialPort.read(100)
+            serialString = self.read(100)
             picoha_dio_answer = dio.PicohaDioAnswer()
             if len(serialString) == 0:
                 logging.warning("Timeout: no Data received")
@@ -124,13 +113,11 @@ class PicoHostAdapterDio:
             logging.error(err)
             raise PicoHostAdapterDio(err)
 
-    def is_connected(self) -> bool:
-        """Check if the serial port is open"""
-        return self.__serialPort.is_open
+    # --- Commend and Keyword ---
 
     def ping_info(self) -> dio.PicohaDioAnswer:
         """
-        Get ping info
+        Get ping info: 0 => no problem
         return :
             type : Status of the command
         """
@@ -180,28 +167,28 @@ class PicoHostAdapterDio:
 
 # ================== Main ======================
 if __name__ == "__main__":
-
-    help(PicoHostAdapterDio)
     """
     ## Example:
     import time
-    # Setup
-    logger = setup_logging(loggingLevel = logging.DEBUG)
 
-    test = PicoHostAdapterDio("COM4")
+    # Setup
+    setup_logging(logging_level=logging.DEBUG)
+
+    test = PicoHostAdapterDio("COM5")
     test.ping_info()
 
-    test.set_gpio_direction(gpio=2,direction=dio.PinValue.OUTPUT)
+    test.set_gpio_direction(gpio=2, direction=dio.PinValue.OUTPUT)
     dir_of_2 = test.get_gpio_direction(gpio=2).value
 
-    test.set_gpio_direction(gpio=3,direction=dio.PinValue.INPUT)
+    test.set_gpio_direction(gpio=3, direction=dio.PinValue.INPUT)
     dir_of_3 = test.get_gpio_direction(gpio=3).value
 
     # Main
-    for i in range(0,4,1):
+    for i in range(0, 4, 1):
         print()
         time.sleep(0.5)
-        test.set_gpio_value(gpio=2,value=1-i%2)
+        test.set_gpio_value(gpio=2, value=1 - i % 2)
         time.sleep(0.5)
         test.get_gpio_value(gpio=3).value
     """
+    help(PicoHostAdapterDio)

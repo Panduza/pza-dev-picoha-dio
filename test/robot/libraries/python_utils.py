@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Launcher Python tests. 
+Utilities :
+RobotFramework Keywords
 Decorator to manage python test and useful function are describe here.
 """
 
@@ -14,10 +15,48 @@ __date__ = "12 Jan 2025"
 import threading
 import functools
 import logging
+from serial.tools import list_ports
 
 # Local imports
 from platform_data import PORT_COM_DUT
 from API_PicoHostAdapterDio import PicoHostAdapterDio
+
+
+# ================== Utilities =================
+###
+# This part add RobotFramework Keywords to compete python API
+###
+def check_usb_info(port_com_dut: str, data_expected: dict):
+    """
+    Verified every expected serial COM info are present
+
+    port_com_dut: str
+    data_expected: dict
+    """
+    for port in list_ports.comports():
+        if port_com_dut == port.device:
+            logging.info(f"Serial Port found: {port.__dict__}")
+            if all(field in port.__dict__ for field in data_expected):
+                raise ValueError("Every required data not present in port COM info.")
+            break
+
+
+def find_port_by_vid_pid(vid: int, pid: int) -> str:
+    """
+    Return the first serial port found on the system with the specified VID and PID.
+
+    :param vid: The Vendor ID of the device.
+    :param pid: The Product ID of the device.
+    :returns: The first serial port that matches the VID and PID.
+    """
+    result = None
+    for port in list_ports.comports():
+        if port.vid == vid and port.pid == pid:
+            logging.debug(f"VID:PID matching on {port.serial_number} : {port.device}")
+            result = port.device
+            break
+    return result
+
 
 # ================== Class =====================
 
@@ -78,5 +117,4 @@ def setup_test(func):
 # ============= Main Functions =================
 
 if __name__ == "__main__":
-
     help(__name__)
