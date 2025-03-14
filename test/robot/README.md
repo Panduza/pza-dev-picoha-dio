@@ -28,7 +28,7 @@ This extension seems better integrated when you work on Windows (less configurat
 
 ![](./images/ext-robot-code.png)
 
-Some others, can be find in [extensions](.vscode\extensions.json) file
+Some others, can be find in [extensions](.vscode/extensions.json) file
 
 <!-- ---------------------------------------------------------------- -->
 
