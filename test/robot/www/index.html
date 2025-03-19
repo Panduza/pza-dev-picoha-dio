@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>Panduza Pico Host Adapter</title>
+        <link rel="icon" href="../images/panduza.png"/>
+        <link rel="stylesheet" href="css/index.css"/>
+
+        <!--Scripts files to include in the project -->
+        <script type="text/javascript"src="js/button.js"></script>
+        <script type="text/javascript" src="js/launch_campagne.js"></script>
+        <script>
+            function launch_campagne_wrapper() {
+                const tag = document.getElementById('tagselect').value;
+                launch_campagne(tag);
+            }
+
+            function updateConsoleLog() {
+            fetch('/output')
+                .then(response => response.text())
+                .then(data => {
+                    const consoleOutput = document.getElementById('consoleOutput');
+                    consoleOutput.innerHTML = `<pre>${data}</pre>`;
+                })
+                .catch(error => console.error('Erreur:', error));
+        }
+
+        setInterval(updateConsoleLog, 1000); // Met à jour toutes les secondes
+        </script>
+    </head>
+
+    <!--Main body of the page -->
+    <body>
+        <div class="banner">
+            <!--<h1>panduza</h1>-->
+            <a href="https://github.com/Panduza" color="white">
+                <img id="img_top" src="../images/panduza.png" alt="Logo panduza" />
+            </a> 
+        </div>
+
+        <!-- Main Page Content -->
+        <div id="global_description">
+            <br/>
+            <h2>Pico Host Adapter Dio</h2>
+            <h2>This project aims to turn the Raspberry Pi Pico into an USB Host Adapter to control each Digital Input/Output.</h2>
+            <br/>
+        </div>
+        
+        <div class="corps">
+            <h2>Description</h2>
+            <p></p>
+
+            <form method="post" action="php/upload.php" enctype="multipart/form-data">
+                <h4>1. Run Campagne:</h4>
+                <button id="submit" type="button" onclick="launch_campagne_wrapper()">Lancer la Campagne</button><br/>
+                <select id="tagselect">
+                    <option value="" selected>Full</option>
+                    <option value="-i GPIO">GPIO</option>
+                    <option value="-i USB">USB</option>
+                </select>
+                
+                <h4>2. You will receive the processed image/video via a link that will appear in the next page:</h4>
+            </form>
+        </div>
+
+        <div id="consoleOutput" >
+            <h3>Console Output:</h3>
+        </div>
+
+        <!-- End Page Content -->
+    </body>
+
+    <!-- Footer -->
+    <footer>
+        <a href="https://github.com/Panduza" color="white">
+            <img src="../images/panduza.png" alt="panduza" id="panduzaLink"/>
+        </a>
+        <!--<a href="https://www.youtube.com/channel/UCF55_oeJKYf0MYX7MppbSAA" color="white">
+            <img src="./img/logo-youtube.ico" alt="youtube" id="youtubelink"/>
+        </a>-->
+        <a href="https://discord.gg/H2nSpY9AGe" color="white">
+            <img src="../images/discord-logo-discord-icon.png" alt="discord" id="discord"/>
+        </a>
+    </footer>
+</html>
