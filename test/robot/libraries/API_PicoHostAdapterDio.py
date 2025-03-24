@@ -11,6 +11,7 @@ import logging
 import serial, os
 import sliplib as sl
 from google.protobuf.json_format import MessageToDict
+from robot.api.deco import library, keyword
 
 # local imports
 import api_dio_pb2 as dio
@@ -53,6 +54,7 @@ def setup_logging(
 
 
 # ================== Class =====================
+@library
 class PicoHostAdapterDio(serial.Serial):
     """Main API class to control Pico Host Adapter Dio"""
 
@@ -113,8 +115,16 @@ class PicoHostAdapterDio(serial.Serial):
             logging.error(err)
             raise PicoHostAdapterDio(err)
 
-    # --- Commend and Keyword ---
+    @keyword
+    def setup_context(self, port: str):
+        self.__init__(port)
 
+    @keyword
+    def close_context(self):
+        self.__del__()
+
+    # --- Commend and Keyword ---
+    @keyword
     def ping_info(self) -> dio.PicohaDioAnswer:
         """
         Get ping info: 0 => no problem
@@ -124,6 +134,7 @@ class PicoHostAdapterDio(serial.Serial):
         self.__picoha_dio_request(dio.RequestType.PING)
         return self.__picoha_dio_answer().type
 
+    @keyword
     def set_gpio_direction(
         self, gpio: int, direction: dio.PinValue
     ) -> dio.PicohaDioAnswer:
@@ -135,6 +146,7 @@ class PicoHostAdapterDio(serial.Serial):
         self.__picoha_dio_request(dio.RequestType.SET_PIN_DIRECTION, gpio, direction)
         return self.__picoha_dio_answer().type
 
+    @keyword
     def set_gpio_value(self, gpio: int, value: dio.PinValue) -> dio.PicohaDioAnswer:
         """
         Set value of gpio as HIGH/LOW
@@ -144,6 +156,7 @@ class PicoHostAdapterDio(serial.Serial):
         self.__picoha_dio_request(dio.RequestType.SET_PIN_VALUE, gpio, value)
         return self.__picoha_dio_answer().type
 
+    @keyword
     def get_gpio_direction(self, gpio: int) -> dio.PicohaDioAnswer:
         """
         Get direction of gpio in INPUT/OUTPUT
@@ -154,6 +167,7 @@ class PicoHostAdapterDio(serial.Serial):
         self.__picoha_dio_request(dio.RequestType.GET_PIN_DIRECTION, gpio)
         return self.__picoha_dio_answer()
 
+    @keyword
     def get_gpio_value(self, gpio: int) -> dio.PicohaDioAnswer:
         """
         Get value of gpio as HIGH/LOW

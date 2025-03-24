@@ -4,12 +4,13 @@
 Library      Collections
 
 # All variables must be defined here
-Variables    platform_data.py
-Variables    api_dio_pb2.py
+Variables    ../../platform/RaspberryPico/platform_data.py
+Variables    ../../libraries/api_dio_pb2.py
 
 # All Library must be imported here 
-Library     python_utils.py
-Library     platform_data.py
+Library     ../../libraries/python_utils.py
+Library     ../../platform/RaspberryPico/platform_data.py
+Library     ../../libraries/API_PicoHostAdapterDio.py
 
 *** Variables ***
 ${Status_Last_CMD} =    None
@@ -19,28 +20,30 @@ ${test}
 Main Test Platform Setup
     [Documentation]    Prepare testing environment
     Log     "RaspberryPico Setup"
-    Log    ${test}
-    ${_test}=    Evaluate    API_PicoHostAdapterDio.PicoHostAdapterDio('${PORT_COM_DUT}')
-    Should Be Equal As Strings    ${_test.is_open}    True
-    Set Global Variable     ${test}    ${_test} 
+    IF    '${PORT_COM_DUT}' == '${EMPTY}'
+        ${PORT_COM_DUT}=    Find Port By Vid Pid    vid=5824    pid=1505
+        Set Global Variable     ${PORT_COM_DUT}    ${PORT_COM_DUT}
+    END
+    Setup Context    port=${PORT_COM_DUT}
 
 Main Test Platform Cleanup
     [Documentation]    Clean testing environment
     Log     "RaspberryPico Cleanup"
-    Call Method    ${test}    close
+    Close Context
 
 # Keywords can be place in other files to organize the code
 a system that is correctly initialized
     [Documentation]    Check the system is correctly initialized
     Set Log Level    TRACE
-    Should Be Equal As Strings    ${test.is_open}    True
-    ${ping}=    Call Method    ${test}    ping_info
+    #Should Be Equal As Strings    ${test.is_open}    True
+    #${ping}=    Call Method    ${test}    ping_info
+    ${ping}=    Ping Info
     Should Be Equal As Strings    ${ping}    ${SUCCESS}
     Log                 "system is initialized"
 
 communication working
     [Documentation]    Send Ping command
-    ${ping}=    Call Method    ${test}    ping_info
+    ${ping}=    Ping Info
     Should Be Equal As Strings    ${ping}    ${SUCCESS}
 
 the system is asked to set @{GPIOs_list} as "${direction}"
@@ -55,10 +58,10 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     FOR    ${gpio}   IN  @{GPIOs_list}
         # Set GPIO direction 
         ${gpio}=    Evaluate    ${gpio}
-        ${status}=    Call Method    ${test}    set_gpio_direction    gpio=${gpio}         direction=${direction}
+        ${status}=    Set Gpio Direction    gpio=${gpio}         direction=${direction}
         Should Be Equal As Strings    ${status}    ${SUCCESS}
         ${gpio_comp} =    Get Comp Gpio    ${gpio}
-        ${status}=    Call Method    ${test}    set_gpio_direction    gpio=${gpio_comp}    direction=${dir_com}
+        ${status}=    Set Gpio Direction    gpio=${gpio_comp}    direction=${dir_com}
         Should Be Equal As Strings    ${status}    ${SUCCESS}
     END
 
@@ -66,7 +69,7 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     [Documentation]    Check gpio direction
     FOR    ${gpio}   IN  @{GPIOs_list}
         ${gpio}=    Evaluate    ${gpio}
-        ${gpio_dir}=    Call Method    ${test}    get_gpio_direction    ${gpio}
+        ${gpio_dir}=    Get Gpio Direction    ${gpio}
         Should Be Equal As Strings    ${gpio_dir.value}    ${direction}
     END
 
@@ -74,7 +77,7 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     [Documentation]    "Set gpio value"
     FOR    ${gpio}   IN    @{GPIOs_list}
         ${gpio}=    Evaluate    ${gpio}
-        ${status}=    Call Method    ${test}    set_gpio_value    ${gpio}    ${value}
+        ${status}=    Set Gpio Value    ${gpio}    ${value}
         Should Be Equal As Strings    ${status}    ${SUCCESS}
     END
 
@@ -82,7 +85,7 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     [Documentation]    Check GPIO value output by reading paired GPIO input
     FOR    ${gpio}   IN  @{GPIOs_list}
         ${gpio_comp} =    Get Comp Gpio    ${gpio}
-        ${value_comp}=    Call Method    ${test}    get_gpio_value     ${gpio_comp}
+        ${value_comp}=    Get Gpio Value     ${gpio_comp}
         Should Be Equal As Strings    ${value_comp.value}    ${value}
     END
 
@@ -90,7 +93,7 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     [Documentation]    Set paired GPIO value
     FOR    ${gpio}   IN  @{GPIOs_list}
         ${gpio_comp} =    Get Comp Gpio    ${gpio}
-        ${status}=    Call Method    ${test}   set_gpio_value    ${gpio_comp}    ${value}
+        ${status}=    Set Gpio Value    ${gpio_comp}    ${value}
         Should Be Equal As Strings    ${status}    ${SUCCESS}
     END
 
@@ -98,11 +101,11 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     [Documentation]    Check GPIO value input by reading paired GPIO output
     FOR    ${gpio}   IN  @{GPIOs_list}
         ${gpio_comp} =    Get Comp Gpio    ${gpio}
-        ${status}=    Call Method    ${test}    set_gpio_value    ${gpio_comp}     ${value}
+        ${status}=    Set Gpio Value    ${gpio_comp}     ${value}
         Should Be Equal As Strings    ${status}    ${SUCCESS}
 
         ${gpio}=     Evaluate    ${gpio}
-        ${value_read}=    Call Method    ${test}    get_gpio_value    ${gpio}
+        ${value_read}=    Set Gpio Value    ${gpio}
         Should Be Equal As Strings    ${value_read.value}    ${value}
     END
 
@@ -110,7 +113,7 @@ the system is asked to set a not existing gpio
     [Documentation]    Set GPIO 50 to OUTOUT
     ${not_existing_gpio}    Evaluate    50
     ${status}=    Run Keyword And Continue On Failure    
-    ...    Call Method    ${test}    set_gpio_direction    ${not_existing_gpio}     ${OUTPUT}
+    ...    Set Gpio Direction    ${not_existing_gpio}     ${OUTPUT}
     Set Global Variable     ${Status_Last_CMD}    ${status}
 
 output error must be FAILURE
@@ -125,7 +128,7 @@ check ping function
     @{list_time_list} =    Create List  
     FOR    ${i}    IN RANGE    0    ${repeat_time}
         ${start_time}=    Evaluate    time.time()    modules=time
-        Call Method    ${test}    ping_info
+        Ping Info
         ${end_time}=    Evaluate    time.time()    modules=time
         ${elapsed_time}=    Evaluate    ${end_time} - ${start_time}
         Append To List    ${list_time_list}    ${elapsed_time}
