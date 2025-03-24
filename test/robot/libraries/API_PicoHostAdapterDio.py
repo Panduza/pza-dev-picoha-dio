@@ -115,12 +115,19 @@ class PicoHostAdapterDio(serial.Serial):
             logging.error(err)
             raise PicoHostAdapterDio(err)
 
-    @keyword
-    def setup_context(self, port: str):
+    @keyword("Setup Context")
+    def __setup_context(self, port: str):
+        """
+        Keyword use to setup up Pico Host Adapter Dio object.
+        """
         self.__init__(port)
+        return self
 
-    @keyword
-    def close_context(self):
+    @keyword("Close Context")
+    def __close_context(self):
+        """
+        Keyword use to delete Pico Host Adapter Dio object.
+        """
         self.__del__()
 
     # --- Commend and Keyword ---
