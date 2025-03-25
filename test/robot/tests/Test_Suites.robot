@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation       This file Describe tests and run it.
 
-Resource            platform.resource
+Resource            ../platform/RaspberryPico/platform.resource
 
 Test Setup          Main Test Platform Setup
 Test Teardown       Main Test Platform Cleanup

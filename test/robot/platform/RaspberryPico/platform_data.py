@@ -12,7 +12,11 @@ if os.path.exists(_init_file):
     logging.info(f"Load config from :{_init_file}")
     _config = ConfigParser()
     _config.read(_init_file)
-    PORT_COM_DUT = _config.get("General", "PortCOM")
+    PORT_COM_DUT = (
+        _config.get("General", "PortCOM")
+        if _config.has_option("General", "PortCOM")
+        else ""
+    )
 else:
     logging.error(f"we didn't found: {_init_file}.")
 
