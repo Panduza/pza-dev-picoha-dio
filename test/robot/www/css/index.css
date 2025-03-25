@@ -6,7 +6,7 @@ body {
 
 div.banner{
     height: 6em;
-    background-image:url() ;
+    background-image:url(https://www.advans-group.com/wp-content/uploads/2020/07/elsys-design-societe-advans-group-1920-500-30.jpg) ;
     background-size: cover;
     background-color: black;
     color: white;
@@ -65,7 +65,7 @@ button{
 #submit{
   background-color: green;
 }
-#tagselect{
+#tag_select{
     width: 200px;
     border: 30px black;
     border: 3px white solid;

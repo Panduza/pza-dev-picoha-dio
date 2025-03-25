@@ -70,7 +70,7 @@ Here you are using the "demo" resources
 
 Robot Framework is a great python test framework but Gherkin provide a better test description syntax.
 
-I advice to use it on your high level test descriptions : (see [tests/Test_Suite_GPIO.robot](./tests/Test_Suite_GPIO.robot))
+I advice to use it on your high level test descriptions : (see [tests/Test_Suites.robot](./tests/Test_Suites.robot))
 
 By the way, if your are not using python on some other project... Go see https://cucumber.io/
 
@@ -114,8 +114,33 @@ Use a ['Robot Framework Test Suite'](./tests/) to run a test campagne with robot
 Example :
 ```
 cd ./tests
-robot Test_Suite_GPIO.robot
+robot Test_Suite.robot
 ```
 
 > [!NOTE]  
 > Check communication port number on your device management and put it on [config_file.ini](./platform/RaspberryPico/config_file.ini)
+
+## Docker 
+
+For those who only want use docker, we created an [Dockerfile](./Dockerfile) to build a image.
+
+### Install docker
+
+See the official site to install docker depending of you system : https://docs.docker.com/desktop/
+
+
+### Build docker image 
+
+    docker build . -t ${IMAGE_NAME}
+
+### Run docker instance
+
+    docker run -it --rm -d --name ${container_name} -p 8080:80 ${IMAGE_NAME}
+
+### Stop docker instance
+
+    docker stop ${container_name}
+
+>[!Note]
+> I created an executable for linux user: [report-server.sh](./report-server.sh).
+> It allow you to run easily docker commend.
