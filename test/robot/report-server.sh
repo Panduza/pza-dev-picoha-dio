@@ -32,16 +32,22 @@ case $ACTION in
     start)
         echo -e " --------------------------------------------------\n"\
                 "Starting and connecting the instance ${container_name}\n"\
+                "Connect USB: ${pico_port}\n"\
                 "--------------------------------------------------"
-        docker run -it --rm -d --name ${container_name} -p 8080:80 ${IMAGE_NAME}
+        docker run -it --rm -d --name ${container_name} \
+            --device=${pico_port} \
+            -p 8080:80 \
+            ${IMAGE_NAME}
         ;;
 
     run)
         echo -e " --------------------------------------------------\n"\
                 "Run instance of img: ${IMAGE_NAME}.\n"\
+                "Connect USB: ${pico_port}\n"\
                 "--------------------------------------------------"
-        docker run -it --entrypoint sh ${IMAGE_NAME}
-        # --device=${pico_port}
+        docker run -it --entrypoint bash \
+            --device=${pico_port} \
+            ${IMAGE_NAME}
         ;;
 
     clean)

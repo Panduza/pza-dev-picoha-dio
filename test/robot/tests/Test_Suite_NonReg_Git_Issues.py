@@ -146,7 +146,8 @@ if __name__ == "__main__":
         args=[
             "--capture=no",
             "--verbose",
-            "--log-level=DEBUG",
+            "--log-file-level=DEBUG",
+            "--log-file=pytest.log",
             os.path.abspath(__file__),
         ]
     )

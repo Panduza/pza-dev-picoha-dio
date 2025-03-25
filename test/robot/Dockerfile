@@ -12,7 +12,7 @@ RUN apt update && apt upgrade -y
 
 # Stage 1: Build the Python application
 # Install Python and pip
-RUN apt install -y python3 python3-pip python3-venv
+RUN apt install -y python3 python3-pip 
 
 # Install requirements python packet
 # No need to create virtual environment here: break system packages
@@ -20,7 +20,7 @@ RUN pip install --break-system-packages -r requirements.txt
 
 # Stage 2: Set up Nginx
 # Install Nginx
-RUN apt install -y nginx systemctl
+RUN apt install -y nginx
 
 # Copy your custom Nginx configuration file
 COPY ./www/panduza-server.conf /etc/nginx/sites-enabled/
