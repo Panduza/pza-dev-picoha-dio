@@ -16,9 +16,10 @@ case $ACTION in
         ;;
     status)
         echo -e " ---------------------------------\n"\
-                "Checking the status of ${IMAGE_NAME}\n"\
+                "Get the status of ${IMAGE_NAME}\n"\
                 "---------------------------------"
-        DATA=$(docker ps | grep ${IMAGE_NAME})
+        # Get the status of the specified image name
+        DATA=$( $PS_DATA | grep ${IMAGE_NAME})
         [[ -z $DATA ]] && echo "No Process" || echo "$DATA"
         ;;
 
@@ -54,19 +55,32 @@ case $ACTION in
         echo -e " --------------------------------------------------\n"\
                 "Remove image ${IMAGE_NAME}.\n"\
                 "--------------------------------------------------"
-        img_ids=$(docker image ls | grep ${IMAGE_NAME})
-        for img in $img_ids; do
-            docker image rm -f $img
+        # Get the image IDs for the specified image name
+        img_ids=$(docker image ls --format "{{.Repository}}:{{.Tag}}->{{.ID}}" | grep -E "${IMAGE_NAME}|<none>")
+        # Ask for confirmation before deleting the images
+        echo "Are you sure you want to delete the following images ? (y/n):"
+        for img in ${img_ids}; do
+            echo -e $img
         done
+        read answer
+        if [ "$answer" = "y" ]; then
+            # Loop through each image ID and remove the image
+            for img in $(echo -e $img_ids | cut -d '>' -f 2); do
+                docker image rm -f $img && echo "Image deleted successfully." || echo "Failed to Delete Image."
+            done
+        else
+            echo "Operation cancelled."
+        fi
         ;;
 
     *)
         echo "$0 [ARG]"
-        echo -e "\t* stop   : stops the Docker instance"
-        echo -e "\t* start  : start the Docker instance and/or connect you to bash"
-        echo -e "\t* status : displays the status of your instance"
-        echo -e "\t* build  : rebuilds the Docker image ${IMAGE_NAME}"
-        echo -e "\t* run    : run the Docker instance"
+        echo -e "\t* run    : Run the Docker instance"
+        echo -e "\t* stop   : Stops the Docker instance"
+        echo -e "\t* start  : Start the Docker instance and/or connect you to bash"
+        echo -e "\t* status : Get the status of your instance"
+        echo -e "\t* build  : Builds the Docker image ${IMAGE_NAME}"
+        echo -e "\t* clean  : Delete docker image ${IMAGE_NAME} and image called 'None'"
         ;;
 esac
 

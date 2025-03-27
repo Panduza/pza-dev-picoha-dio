@@ -18,7 +18,7 @@ if os.path.exists(_init_file):
         else ""
     )
 else:
-    logging.error(f"we didn't found: {_init_file}.")
+    logging.info(f"we didn't found: {_init_file}.")
 
 BUILTIN_LED = 25
 GPIO_UART = [0, 1]

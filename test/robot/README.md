@@ -122,7 +122,7 @@ robot Test_Suite.robot
 
 ## Docker 
 
-For those who only want use docker, we created an [Dockerfile](./Dockerfile) to build a image.
+For those who only want use docker, we created an [Dockerfile](./Dockerfile) to build a image using [nginx](https://www.slingacademy.com/article/nginx-execute-shell-commands-on-every-request/).
 
 ### Install docker
 
@@ -131,15 +131,29 @@ See the official site to install docker depending of you system : https://docs.d
 
 ### Build docker image 
 
-    docker build . -t ${IMAGE_NAME}
+This command build docker image according [Dockerfile](./Dockerfile):
+
+```docker build . -t ${IMAGE_NAME}```
+
+### Enter in docker instance
+This command allow you to enter in the instance image in bash terminal :
+
+```docker run -it --entrypoint bash ${IMAGE_NAME}```
+
+you can add --device option to connect the pico device to this instance.
+
+Example:
+```docker run -it --entrypoint bash --device=/dev/ttyACM0 My_Image```
 
 ### Run docker instance
+This command start instance. you should be able to connect to nginx server on http://localhost:8080/
 
-    docker run -it --rm -d --name ${container_name} -p 8080:80 ${IMAGE_NAME}
+```docker run -it --rm -d --name ${container_name} -p 8080:80 ${IMAGE_NAME}```
 
 ### Stop docker instance
+This command start instance.
 
-    docker stop ${container_name}
+```docker stop ${container_name}```
 
 >[!Note]
 > I created an executable for linux user: [report-server.sh](./report-server.sh).
