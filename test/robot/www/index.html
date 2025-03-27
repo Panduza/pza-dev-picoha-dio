@@ -3,18 +3,13 @@
     <head>
         <meta charset="UTF-8"/>
         <title>Panduza Pico Host Adapter</title>
-        <link rel="icon" href="../images/panduza.png"/>
+        <link rel="icon" href="https://avatars.githubusercontent.com/u/99142567?s=200&v=4"/>
         <link rel="stylesheet" href="css/index.css"/>
 
         <!--Scripts files to include in the project -->
-        <script type="text/javascript"src="js/button.js"></script>
         <script type="text/javascript" src="js/launch_campagne.js"></script>
         <script>
-            function launch_campagne_wrapper() {
-                const tag = document.getElementById('tagselect').value;
-                launch_campagne(tag);
-            }
-
+            var campagne_running=0;
             function updateConsoleLog() {
             fetch('/output')
                 .then(response => response.text())
@@ -22,7 +17,7 @@
                     const consoleOutput = document.getElementById('consoleOutput');
                     consoleOutput.innerHTML = `<pre>${data}</pre>`;
                 })
-                .catch(error => console.error('Erreur:', error));
+                .catch(error => console.error('Error:', error));
         }
 
         setInterval(updateConsoleLog, 1000); // Met à jour toutes les secondes
@@ -34,33 +29,36 @@
         <div class="banner">
             <!--<h1>panduza</h1>-->
             <a href="https://github.com/Panduza" color="white">
-                <img id="img_top" src="../images/panduza.png" alt="Logo panduza" />
+                <img id="img_top" src="https://avatars.githubusercontent.com/u/99142567?s=200&v=4" alt="Logo panduza" />
             </a> 
+            <h1 text-align="center">Panduza</h1>
         </div>
 
         <!-- Main Page Content -->
-        <div id="global_description">
+        <div id="title">
             <br/>
             <h2>Pico Host Adapter Dio</h2>
-            <h2>This project aims to turn the Raspberry Pi Pico into an USB Host Adapter to control each Digital Input/Output.</h2>
             <br/>
         </div>
         
         <div class="corps">
-            <h2>Description</h2>
-            <p></p>
+            <h3>Description</h3>
+            <p>This project aims to turn the Raspberry Pi Pico into an USB Host Adapter to control each Digital Input/Output. On this page page you can run campagne test.</p>
 
-            <form method="post" action="php/upload.php" enctype="multipart/form-data">
+            <div id="main">
                 <h4>1. Run Campagne:</h4>
-                <button id="submit" type="button" onclick="launch_campagne_wrapper()">Lancer la Campagne</button><br/>
-                <select id="tagselect">
-                    <option value="" selected>Full</option>
-                    <option value="-i GPIO">GPIO</option>
-                    <option value="-i USB">USB</option>
-                </select>
-                
+                <form method="post" action="php/upload.php" enctype="multipart/form-data">
+                    <button id="submit" type="button" onclick="launch_campagne_wrapper('submit')">Lancer la Campagne</button><br/>
+                    <select id="tag_select">
+                        <option value="" selected>Full</option>
+                        <option value="-i GPIO">GPIO</option>
+                        <option value="-i USB">USB</option>
+                    </select>
+                </form>
+
                 <h4>2. You will receive the processed image/video via a link that will appear in the next page:</h4>
-            </form>
+                <button onclick="window.location.href='../log.html';">Click me</button>
+            </div>
         </div>
 
         <div id="consoleOutput" >
@@ -73,13 +71,10 @@
     <!-- Footer -->
     <footer>
         <a href="https://github.com/Panduza" color="white">
-            <img src="../images/panduza.png" alt="panduza" id="panduzaLink"/>
+            <img src="https://avatars.githubusercontent.com/u/99142567?s=200&v=4" alt="panduza" id="panduzaLink"/>
         </a>
-        <!--<a href="https://www.youtube.com/channel/UCF55_oeJKYf0MYX7MppbSAA" color="white">
-            <img src="./img/logo-youtube.ico" alt="youtube" id="youtubelink"/>
-        </a>-->
         <a href="https://discord.gg/H2nSpY9AGe" color="white">
-            <img src="../images/discord-logo-discord-icon.png" alt="discord" id="discord"/>
+            <img src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d7f4ef6498ac018f2c55_Symbol.svg" alt="discord" id="discord"/>
         </a>
     </footer>
 </html>

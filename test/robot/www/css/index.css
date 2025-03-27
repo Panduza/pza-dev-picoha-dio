@@ -19,11 +19,7 @@ div.banner{
 div.corps{
     text-align:left;
     margin-bottom: 6em;
-    color: gray;
 }
-
-h2 {color: black;}
-h3 {color: black;}
 
 footer{
     color: white;
@@ -37,7 +33,6 @@ footer{
 }
 
 form {
-    text-align: center;
     color:black;
 }
 
@@ -45,7 +40,14 @@ button{
     width: 200px;
     border: 30px white;
     border: 3px white solid;
-    color: white;
+    background-color: lightgray;
+    color: black;
+}
+
+#main{
+    text-align:center;
+    background-position: center;
+    margin-bottom: 6em;
 }
 
 #img_top{
@@ -54,7 +56,7 @@ button{
     object-fit: contain;
 }
 
-#global_description{
+#title{
     width: 100%;
     background-image: url(); 
     background-size: cover;

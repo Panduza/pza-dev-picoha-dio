@@ -1,20 +1,28 @@
+
 const { exec } = require('child_process');
 const fs = require('fs');
+const express = require('express');
 
 function launch_campagne(tag) {
-    const command = `robot . ${tag}`;
-    exec(command, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Erreur: ${error.message}`);
-            fs.appendFileSync('output.log', `Erreur: ${error.message}\n`);
-            return;
-        }
-        if (stderr) {
-            console.error(`Erreur: ${stderr}`);
-            fs.appendFileSync('output.log', `Erreur: ${stderr}\n`);
-            return;
-        }
-        console.log(`Résultat: ${stdout}`);
-        fs.appendFileSync('output.log', `Résultat: ${stdout}\n`);
-    });
+    // TODO : find a way to execute 'robot -i tag .' on the server
+    console.log('launch_campagne : robot', tag, '.')
+}
+
+
+function launch_campagne_wrapper(id) {
+    console.log('launch_campagne_wrapper')
+    if (campagne_running === 0){
+        // Locked commend sender
+        campagne_running=1;
+        // Change color indicator 
+        var property = document.getElementById(id);
+        property.style.backgroundColor = "gray";
+        // Get campagne var
+        const tag = document.getElementById('tag_select').value;
+        // Launch campagne 
+        launch_campagne(tag);
+    }
+    else {
+        console.log('Command running')
+    }
 }
