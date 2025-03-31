@@ -1,0 +1,14 @@
+# Git files
+.git/
+.github/
+.gitignore
+
+# User oriented file
+LICENSE
+README.md
+
+# Eclipse & Vscode
+.settings/
+.project
+.venv/
+.vscode/
