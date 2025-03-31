@@ -2,7 +2,7 @@
 
 This project aims to turn the Raspberry Pi Pico into an USB Host Adapter to control each Digital Input/Output.
 
-![](./schema.png)
+[![](./schema.png)](https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf)
 
 ## Install firmware on your Pico
 

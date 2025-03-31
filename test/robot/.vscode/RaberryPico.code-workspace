@@ -1,0 +1,55 @@
+{
+    "folders": [
+        {
+            "name": "Panduza: RaberryPico",
+            "path": ".."
+        },
+    ],
+    "settings": {
+        // Robot Framework
+        "robotcode.robot.pythonPath": [
+            "${workspaceFolder}/libraries/*",
+            "${workspaceFolder}/platform/RaspberryPico/*"
+        ],
+        // Python
+        "python.terminal.activateEnvironment": true,
+        "python.analysis.extraPaths": [
+            "${workspaceFolder}/libraries/*",
+            "${workspaceFolder}/platform/RaspberryPico/*"
+        ],
+        // Pytest
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": [
+            "${workspaceFolder}/tests",
+            "--verbose",
+            "--capture=no",
+            "--log-date-format='%Y-%m-%d %H:%M:%S'",
+            // Print logs in terminal config
+            "--log-cli-level=INFO",
+            "--log-cli-format='%(levelname)s %(message)s'",
+            // Save logs in file config
+            "--log-file=pytest.log",
+            "--log-file-level=DEBUG",
+            "--log-file-format='%(asctime)s %(levelname)s %(message)s'"
+        ],
+
+        // Others
+        "cSpell.words": [
+            "Panduza",
+            "Pico",
+            "Picoha"
+        ]
+    },
+    "extensions": {
+        "recommendations": [
+            // Python
+            "ms-python.python",
+            "ms-python.black-formatter",
+            // Robot Framework
+            "d-biehl.robotcode",
+            // Others
+            "streetsidesoftware.code-spell-checker"
+        ]
+    }
+}
