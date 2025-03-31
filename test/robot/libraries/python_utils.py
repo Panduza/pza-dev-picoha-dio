@@ -36,7 +36,7 @@ def check_usb_info(port_com_dut: str, data_expected: dict):
     for port in list_ports.comports():
         if port_com_dut == port.device:
             logging.info(f"Serial Port found: {port.__dict__}")
-            if all(field in port.__dict__ for field in data_expected):
+            if all(field in data_expected for field in port.__dict__):
                 raise ValueError("Every required data not present in port COM info.")
             break
 

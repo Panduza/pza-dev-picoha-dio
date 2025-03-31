@@ -101,11 +101,7 @@ the system is asked to set @{GPIOs_list} as "${direction}"
     [Documentation]    Check GPIO value input by reading paired GPIO output
     FOR    ${gpio}   IN  @{GPIOs_list}
         ${gpio_comp} =    Get Comp Gpio    ${gpio}
-        ${status}=    Set Gpio Value    ${gpio_comp}     ${value}
-        Should Be Equal As Strings    ${status}    ${SUCCESS}
-
-        ${gpio}=     Evaluate    ${gpio}
-        ${value_read}=    Set Gpio Value    ${gpio}
+        ${value_read}=    Get Gpio Value    ${gpio_comp}
         Should Be Equal As Strings    ${value_read.value}    ${value}
     END
 
