@@ -22,8 +22,11 @@ RUN pip install --break-system-packages -r requirements.txt
 # Install Nginx
 RUN apt install -y nginx
 
+# I also use python dependence on app.py
+RUN pip install --break-system-packages Flask
+
 # Copy your custom Nginx configuration file
-COPY ./www/panduza-server.conf /etc/nginx/sites-enabled/
+COPY ./panduza-server.conf /etc/nginx/sites-enabled/
 
 # Set the command to start Nginx
 CMD ["nginx", "-g", "daemon off;"]

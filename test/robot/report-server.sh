@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# This Bash script allows you to manage a Docker instance for a Robot Framework report server with Nginx. 
+# It supports various actions such as building the Docker image, starting, stopping, running, and cleaning up Docker images.
+#
+
 ACTION=$1
 IMAGE_NAME=img_nginx_robot
 
@@ -33,7 +38,9 @@ case $ACTION in
     start)
         echo -e " --------------------------------------------------\n"\
                 "Starting and connecting the instance ${container_name}\n"\
+                "Container base on ${IMAGE_NAME}"\
                 "Connect USB: ${pico_port}\n"\
+                "Report use port: 8080\n"\
                 "--------------------------------------------------"
         docker run -it --rm -d --name ${container_name} \
             --device=${pico_port} \
@@ -43,12 +50,9 @@ case $ACTION in
 
     run)
         echo -e " --------------------------------------------------\n"\
-                "Run instance of img: ${IMAGE_NAME}.\n"\
-                "Connect USB: ${pico_port}\n"\
+                "Enter in container: ${container_name}.\n"\
                 "--------------------------------------------------"
-        docker run -it --entrypoint bash \
-            --device=${pico_port} \
-            ${IMAGE_NAME}
+        docker exec -it ${container_name} bash
         ;;
 
     clean)
@@ -56,17 +60,20 @@ case $ACTION in
                 "Remove image ${IMAGE_NAME}.\n"\
                 "--------------------------------------------------"
         # Get the image IDs for the specified image name
-        img_ids=$(docker image ls --format "{{.Repository}}:{{.Tag}}->{{.ID}}" | grep -E "${IMAGE_NAME}|<none>")
+        images_infos=$(docker image ls --format "{{.Repository}}:{{.Tag}}:{{.ID}}" | grep -E "${IMAGE_NAME}|<none>")
+
         # Ask for confirmation before deleting the images
+        for images in ${images_infos}; do
+            echo -e $images
+        done        
         echo "Are you sure you want to delete the following images ? (y/n):"
-        for img in ${img_ids}; do
-            echo -e $img
-        done
         read answer
+
         if [ "$answer" = "y" ]; then
             # Loop through each image ID and remove the image
-            for img in $(echo -e $img_ids | cut -d '>' -f 2); do
-                docker image rm -f $img && echo "Image deleted successfully." || echo "Failed to Delete Image."
+            for img in $images_infos; do #
+                img_id=$(echo $img | cut -d ':' -f 3)
+                docker image rm -f $img_id && echo "Image deleted successfully." || echo "Failed to Delete Image."
             done
         else
             echo "Operation cancelled."
@@ -80,7 +87,7 @@ case $ACTION in
         echo -e "\t* start  : Start the Docker instance and/or connect you to bash"
         echo -e "\t* status : Get the status of your instance"
         echo -e "\t* build  : Builds the Docker image ${IMAGE_NAME}"
-        echo -e "\t* clean  : Delete docker image ${IMAGE_NAME} and image called 'None'"
+        echo -e "\t* clean  : Delete docker image ${IMAGE_NAME} and image called <none>"
         ;;
 esac
 

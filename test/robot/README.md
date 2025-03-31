@@ -135,26 +135,42 @@ This command build docker image according [Dockerfile](./Dockerfile):
 
 ```docker build . -t ${IMAGE_NAME}```
 
+
+### Starting and connecting the instance 
+    
+ Starts and connects to the specified Docker instance. Connect USB ${pico_port} and start nginx on http://localhost:8080/
+    
+    ```
+    docker run -it --rm -d --name ${container_name} \
+        --device=${pico_port} \
+        -p 8080:80 \
+        ${IMAGE_NAME}
+    ```
+
 ### Enter in docker instance
 This command allow you to enter in the instance image in bash terminal :
 
 ```docker run -it --entrypoint bash ${IMAGE_NAME}```
 
-you can add --device option to connect the pico device to this instance.
-
-Example:
-```docker run -it --entrypoint bash --device=/dev/ttyACM0 My_Image```
-
 ### Run docker instance
-This command start instance. you should be able to connect to nginx server on http://localhost:8080/
+This command start instance. you should be able to connect to nginx server 
 
-```docker run -it --rm -d --name ${container_name} -p 8080:80 ${IMAGE_NAME}```
+```docker exec -it ${container_name} bash```
 
 ### Stop docker instance
 This command start instance.
 
 ```docker stop ${container_name}```
 
+
 >[!Note]
 > I created an executable for linux user: [report-server.sh](./report-server.sh).
 > It allow you to run easily docker commend.
+>   
+>Available Actions
+>   - build: Builds the Docker image with the specified name.
+>   - status: Displays the status of the specified Docker image.
+>   - stop: Stops the specified Docker instance.
+>   - start: Starts and connects to the specified Docker instance.
+>   - run: Opens an interactive bash session in the running Docker instance.
+>   - clean: Removes the specified Docker image and images called 'none'.
