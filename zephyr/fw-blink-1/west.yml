@@ -1,4 +1,5 @@
 manifest:
+  version: "0.13"
   remotes:
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
@@ -7,6 +8,8 @@ manifest:
       remote: zephyrproject-rtos
       revision: v4.4.0
       import: false
-
-
-
+    # Ajoutez UNIQUEMENT les modules dont vous avez besoin :
+    - name: hal_rpi_pico
+      remote: zephyrproject-rtos
+      revision: v4.4.0
+      path: modules/hal/rpi_pico
