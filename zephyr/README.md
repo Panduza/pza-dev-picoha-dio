@@ -1,0 +1,1 @@
+west init -l fw-blink-1
