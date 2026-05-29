@@ -12,6 +12,6 @@ manifest:
     # Ajoutez UNIQUEMENT les modules dont vous avez besoin :
     - name: hal_rpi_pico
       remote: zephyrproject-rtos
-      revision: v4.4.0
+      revision: 562b41e10a1d8b1a761b253b107c5c6a84cf4535
       path: modules/hal/rpi_pico
       clone-depth: 1
