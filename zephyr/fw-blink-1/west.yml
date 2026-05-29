@@ -5,6 +5,8 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject-rtos
-      revision: main  # ou une version spécifique comme v3.6.0
-      import: true     # Importe Zephyr et ses modules par défaut
+      revision: v4.4.0
+      import: false
+
+
 
