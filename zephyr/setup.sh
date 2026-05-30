@@ -41,3 +41,7 @@ fi
 echo "Updating west dependencies..."
 west update
 
+# --- 
+pip install -r zephyr/scripts/requirements.txt
+# west sdk install
+west sdk install -t arm-zephyr-eabi

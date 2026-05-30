@@ -7,12 +7,12 @@ manifest:
     - name: zephyr
       remote: zephyrproject-rtos
       revision: v4.4.0
-      import: false
+      import: true
       clone-depth: 1
       west-commands: scripts/west-commands.yml
-    # Ajoutez UNIQUEMENT les modules dont vous avez besoin :
-    - name: hal_rpi_pico
-      remote: zephyrproject-rtos
-      revision: 562b41e10a1d8b1a761b253b107c5c6a84cf4535
-      path: modules/hal/rpi_pico
-      clone-depth: 1
+    # # Ajoutez UNIQUEMENT les modules dont vous avez besoin :
+    # - name: hal_rpi_pico
+    #   remote: zephyrproject-rtos
+    #   revision: 562b41e10a1d8b1a761b253b107c5c6a84cf4535
+    #   path: modules/hal/rpi_pico
+    #   clone-depth: 1
