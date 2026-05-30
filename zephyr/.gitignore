@@ -1,3 +1,6 @@
 zephyr
 .west
 build
+bootloader
+modules
+tools
